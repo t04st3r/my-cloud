@@ -3,11 +3,14 @@ import os
 
 
 class Common:
+    """ Common configurations shared between Prod, Test, Dev """
+
     # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    # Quick-start development settings - unsuitable for production
-    # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
+    # Media files path
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
     # Application definition
 
@@ -18,6 +21,7 @@ class Common:
         'django.contrib.sessions',
         'django.contrib.messages',
         'django.contrib.staticfiles',
+        'file_handler.apps.FileHandlerConfig',
     ]
 
     MIDDLEWARE = [
@@ -43,6 +47,7 @@ class Common:
                     'django.template.context_processors.request',
                     'django.contrib.auth.context_processors.auth',
                     'django.contrib.messages.context_processors.messages',
+                    'django.template.context_processors.media',
                 ],
             },
         },
