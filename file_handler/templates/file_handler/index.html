@@ -1,0 +1,43 @@
+<h4>folder {{ root.name }}</h4>
+
+{% if children %}
+
+    <h5>children folders</h5>
+
+    <ul>
+
+    {% for child in children %}
+
+        <li><a href="/{{ child.id }}/">{{ child.name }}</a></li>
+
+    {% endfor %}
+
+    </ul>
+
+{% else %}
+
+    <p>folder {{ root.name }} has no children folders</p>
+
+{% endif %}
+
+{% if documents %}
+
+    <h5>documents</h5>
+
+    <ul>
+
+    {% for document in documents %}
+
+        <li><a href="/detail/{{ document.id }}/">{{ document.name }}</a></li>
+
+    {% endfor %}
+
+    </ul>
+
+{% else %}
+
+    <p>folder {{ root.name }} is empty</p>
+
+{% endif %}
+
+<h5><a href="/upload/{{ root.id }}/">Upload Files</a></h5>
