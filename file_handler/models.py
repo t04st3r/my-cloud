@@ -19,6 +19,9 @@ class Document(models.Model):
     creation_date = models.DateTimeField(default=datetime.now, blank=True)
     folder = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True)
 
+    def __str__(self):
+        return self.name
+
     def filename(self):
         return os.path.basename(self.file.name)
 

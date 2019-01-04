@@ -1,54 +1,60 @@
-<h4>folder {{ root.name }}</h4>
+{% extends 'base.html' %}
 
-{% if root.parent %}
+{% block title %}<h4>folder {{ root.name }}</h4>{% endblock %}
 
-    <h5><a href="/{{ root.parent.id }}">Back to parent folder ({{ root.parent.name }})</a></h5>
+{% block content %}
 
-{% else %}
+    {% if root.parent %}
 
-    <h5>filesystem root</h5>
+        <h5><a href="/{{ root.parent.id }}">Back to parent folder ({{ root.parent.name }})</a></h5>
 
-{% endif %}
+    {% else %}
 
-{% if children %}
+        <h5>filesystem root</h5>
 
-    <h5>children folders</h5>
+    {% endif %}
 
-    <ul>
+    {% if children %}
 
-    {% for child in children %}
+        <h5>children folders</h5>
 
-        <li><a href="/{{ child.id }}/">{{ child.name }}</a></li>
+        <ul>
 
-    {% endfor %}
+        {% for child in children %}
 
-    </ul>
+            <li><a href="/{{ child.id }}/">{{ child.name }}</a></li>
 
-{% else %}
+        {% endfor %}
 
-    <p>folder {{ root.name }} has no children folders</p>
+        </ul>
 
-{% endif %}
+    {% else %}
 
-{% if documents %}
+        <p>folder {{ root.name }} has no children folders</p>
 
-    <h5>documents</h5>
+    {% endif %}
 
-    <ul>
+    {% if documents %}
 
-    {% for document in documents %}
+        <h5>documents</h5>
 
-        <li><a href="/download/{{ document.id }}">{{ document.name }} ({{ document.filename }}) </a></li>
+        <ul>
 
-    {% endfor %}
+        {% for document in documents %}
 
-    </ul>
+            <li><a href="/download/{{ document.id }}">{{ document.name }} ({{ document.filename }}) </a></li>
 
-{% else %}
+        {% endfor %}
 
-    <p>folder {{ root.name }} is empty</p>
+        </ul>
 
-{% endif %}
+    {% else %}
 
-<h5><a href="/create/{{ root.id }}/">Create Folder</a></h5>
-<h5><a href="/upload/{{ root.id }}/">Upload Files</a></h5>
+        <p>folder {{ root.name }} is empty</p>
+
+    {% endif %}
+
+    <h5><a href="/create/{{ root.id }}/">Create Folder</a></h5>
+    <h5><a href="/upload/{{ root.id }}/">Upload Files</a></h5>
+
+{% endblock %}

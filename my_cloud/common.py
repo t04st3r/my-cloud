@@ -22,6 +22,7 @@ class Common:
         'django.contrib.messages',
         'django.contrib.staticfiles',
         'file_handler.apps.FileHandlerConfig',
+        'crispy_forms',
     ]
 
     MIDDLEWARE = [
@@ -39,7 +40,9 @@ class Common:
     TEMPLATES = [
         {
             'BACKEND': 'django.template.backends.django.DjangoTemplates',
-            'DIRS': [],
+            'DIRS': [
+                BASE_DIR + '/templates/',
+            ],
             'APP_DIRS': True,
             'OPTIONS': {
                 'context_processors': [
@@ -52,6 +55,8 @@ class Common:
             },
         },
     ]
+
+    CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
     WSGI_APPLICATION = 'my_cloud.wsgi.application'
 
@@ -72,6 +77,9 @@ class Common:
             'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
         },
     ]
+
+    LOGIN_URL = '/login/'
+    LOGIN_REDIRECT_URL = '/'
 
     # Internationalization
     # https://docs.djangoproject.com/en/2.1/topics/i18n/

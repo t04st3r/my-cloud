@@ -2,8 +2,10 @@ from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
 from django.utils.encoding import smart_str
 from file_handler.forms import DocumentForm, FolderForm
 from .models import Folder, Document
+from django.contrib.auth.decorators import login_required
 
 
+@login_required
 def upload(request, folder_id):
     folder = get_object_or_404(Folder, pk=folder_id)
     if request.method == 'POST':
@@ -19,6 +21,7 @@ def upload(request, folder_id):
         })
 
 
+@login_required
 def index(request, folder_id=1):
     root = get_object_or_404(Folder, pk=folder_id)
     children = Folder.objects.filter(parent=folder_id)
@@ -30,6 +33,7 @@ def index(request, folder_id=1):
     })
 
 
+@login_required
 def download(request, file_id):
     document = get_object_or_404(Document, pk=file_id)
     response = HttpResponse(document.file, content_type=document.file_mime)
@@ -38,6 +42,7 @@ def download(request, file_id):
     return response
 
 
+@login_required
 def create(request, parent_id):
     parent = get_object_or_404(Folder, pk=parent_id)
     if request.method == 'POST':

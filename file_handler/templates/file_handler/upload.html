@@ -1,3 +1,5 @@
+{% extends 'base.html' %}
+
 {% block content %}
   <form method="post" enctype="multipart/form-data">
     {% csrf_token %}
@@ -5,7 +7,7 @@
     <button type="submit">Upload</button>
   </form>
 
-{% endblock %}
-
 <h5><a href="/{{ folder.id }}">Back to {{ folder.name }}</a></h5>
+
+{% endblock %}
 
