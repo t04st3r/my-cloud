@@ -7,7 +7,7 @@ import magic
 class Folder(models.Model):
     name = models.CharField(max_length=200)
     creation_date = models.DateTimeField(default=datetime.now, blank=True)
-    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
         return self.name
