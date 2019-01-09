@@ -12,6 +12,10 @@ class Folder(models.Model):
     def __str__(self):
         return self.name
 
+    @staticmethod
+    def root_folders():
+        return Folder.objects.filter(parent__isnull=True)
+
 
 class Document(models.Model):
     name = models.CharField(max_length=200)

@@ -11,5 +11,5 @@ class DocumentForm(forms.ModelForm):
 class FolderForm(forms.ModelForm):
     class Meta:
         model = Folder
-        fields = ('name',)
+        fields = ('name', 'parent')
 

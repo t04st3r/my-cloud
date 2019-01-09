@@ -4,6 +4,13 @@ from file_handler.forms import DocumentForm, FolderForm
 from .models import Folder, Document
 from django.contrib.auth.decorators import login_required
 
+@login_required
+def index(request):
+    root_folders = Folder.root_folders()
+    return render(request, 'file_handler/index.html', {
+        'root_folders': root_folders
+    })
+
 
 @login_required
 def upload(request, folder_id):
@@ -12,7 +19,7 @@ def upload(request, folder_id):
         form = DocumentForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
-            return redirect('index', folder_id=folder_id)
+            return redirect('folder', folder_id=folder_id)
     else:
         form = DocumentForm()
         return render(request, 'file_handler/upload.html', {
@@ -22,11 +29,11 @@ def upload(request, folder_id):
 
 
 @login_required
-def index(request, folder_id=1):
+def folder(request, folder_id):
     root = get_object_or_404(Folder, pk=folder_id)
     children = Folder.objects.filter(parent=folder_id)
     documents = Document.objects.filter(folder=folder_id)
-    return render(request, 'file_handler/index.html', {
+    return render(request, 'file_handler/folder.html', {
         'root': root,
         'children': children,
         'documents': documents
@@ -43,20 +50,18 @@ def download(request, file_id):
 
 
 @login_required
-def create(request, parent_id):
-    parent = get_object_or_404(Folder, pk=parent_id)
+def create(request):
     if request.method == 'POST':
         form = FolderForm(request.POST)
         if form.is_valid():
-            new_folder = form.save(commit=False)
-            new_folder.parent_id = parent.id
-            new_folder.save()
-            return redirect('index', folder_id=parent_id)
+            form.save()
+            if form.instance.parent_id is None:
+                return redirect('index')
+            return redirect('folder', folder_id=form.instance.parent_id)
     else:
         form = FolderForm()
         return render(request, 'file_handler/new_folder.html', {
             'form': form,
-            'folder': parent
         })
 
 

@@ -1,28 +1,16 @@
 {% extends 'base.html' %}
 
-{% block title %}<h4>folder {{ root.name }}</h4>{% endblock %}
-
 {% block content %}
 
-    {% if root.parent %}
+    {% if root_folders %}
 
-        <h5><a href="/{{ root.parent.id }}">Back to parent folder ({{ root.parent.name }})</a></h5>
-
-    {% else %}
-
-        <h5>filesystem root</h5>
-
-    {% endif %}
-
-    {% if children %}
-
-        <h5>children folders</h5>
+        <h5>root folders</h5>
 
         <ul>
 
-        {% for child in children %}
+        {% for folder in root_folders %}
 
-            <li><a href="/{{ child.id }}/">{{ child.name }}</a></li>
+            <li><a href="folder/{{ folder.id }}/">{{ folder.name }}</a></li>
 
         {% endfor %}
 
@@ -30,31 +18,10 @@
 
     {% else %}
 
-        <p>folder {{ root.name }} has no children folders</p>
+        <p>Your filesystem is empty</p>
 
     {% endif %}
 
-    {% if documents %}
-
-        <h5>documents</h5>
-
-        <ul>
-
-        {% for document in documents %}
-
-            <li><a href="/download/{{ document.id }}">{{ document.name }} ({{ document.filename }}) </a></li>
-
-        {% endfor %}
-
-        </ul>
-
-    {% else %}
-
-        <p>folder {{ root.name }} is empty</p>
-
-    {% endif %}
-
-    <h5><a href="/create/{{ root.id }}/">Create Folder</a></h5>
-    <h5><a href="/upload/{{ root.id }}/">Upload Files</a></h5>
+    <h5><a href="/create/">Create Root Folder</a></h5>
 
 {% endblock %}
