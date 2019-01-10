@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from django.conf import settings
 import os
 import magic
 
@@ -30,4 +31,4 @@ class Document(models.Model):
         return os.path.basename(self.file.name)
 
     def file_mime(self):
-        return magic.from_file(self.file.name, mime=True)
+        return magic.from_file(settings.MEDIA_ROOT + self.file.name, mime=True)

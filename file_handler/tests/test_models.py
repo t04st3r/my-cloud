@@ -1,13 +1,17 @@
 from django.test import TestCase
 from file_handler.models import Document, Folder
 from django.core.files import File
-import os, shutil
+from django.conf import settings
+from django.utils import timezone
+import os
 
 
 class FolderTestCases(TestCase):
     """ Test for Folder Model """
 
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
         parent = Folder.objects.create(name='parent')
         Folder.objects.create(name='parent2')
         Folder.objects.create(name='child', parent=parent)
@@ -38,13 +42,22 @@ class FolderTestCases(TestCase):
 class DocumentTestCases(TestCase):
     """ Test for Document model """
 
+    TEST_FILE_NAME = 'test.txt'
+    TEST_FILE_MIME_TYPE = 'text/plain'
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        test_file = open('test.txt', 'w+')
         folder = Folder.objects.create(name='Test Folder')
-        Document.objects.create(name='Test File', file=File(test_file), folder=folder)
-        test_file.close()
+        with open(cls.TEST_FILE_NAME, 'w+') as test_file:
+            test_file.write('test\n')
+            Document.objects.create(name='Test File', file=File(test_file), folder=folder)
+
+    def test_file_save(self):
+        """ Test successful file save """
+        path = settings.MEDIA_ROOT + 'documents/%Y/%m/%d/'
+        file_path = timezone.now().strftime(path + self.TEST_FILE_NAME)
+        self.assertTrue(os.path.isfile(file_path))
 
     def test_document_name(self):
         """ Test string representation of a document """
@@ -54,12 +67,16 @@ class DocumentTestCases(TestCase):
     def test_filename(self):
         """ Test document filename """
         document = Document.objects.get(name='Test File')
-        self.assertEqual(document.filename(), 'test.txt')
+        self.assertEqual(document.filename(), self.TEST_FILE_NAME)
+
+    def test_mime_type(self):
+        """ Test correct file mime type """
+        document = Document.objects.get(name='Test File')
+        self.assertEqual(self.TEST_FILE_MIME_TYPE, document.file_mime())
 
     @classmethod
     def tearDownClass(cls):
         document = Document.objects.get(name='Test File')
         os.remove('test.txt')
-        path = document.file.path.replace('test.txt', '')
-        shutil.rmtree(path, ignore_errors=True)
+        os.remove(document.file.path)
         super().tearDownClass()
