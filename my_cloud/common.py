@@ -23,6 +23,9 @@ class Common:
         'django.contrib.staticfiles',
         'file_handler.apps.FileHandlerConfig',
         'crispy_forms',
+        'rest_framework',
+        'oauth2_provider',
+        'api',
     ]
 
     MIDDLEWARE = [
@@ -101,3 +104,19 @@ class Common:
 
     STATIC_URL = '/static/'
     STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
+
+    REST_FRAMEWORK = {
+        'DEFAULT_AUTHENTICATION_CLASSES': (
+            'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+        ),
+        'DEFAULT_PERMISSION_CLASSES': (
+            'rest_framework.permissions.IsAuthenticated',
+        )
+    }
+
+    OAUTH2_PROVIDER = {
+        'SCOPES': {'read': 'Read scope', 'write': 'Write scope'}
+    }
+
+
+

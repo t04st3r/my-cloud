@@ -4,6 +4,7 @@ from file_handler.forms import DocumentForm, FolderForm
 from .models import Folder, Document
 from django.contrib.auth.decorators import login_required
 
+
 @login_required
 def index(request):
     root_folders = Folder.root_folders()
@@ -22,10 +23,10 @@ def upload(request, folder_id):
             return redirect('folder', folder_id=folder_id)
     else:
         form = DocumentForm()
-        return render(request, 'file_handler/upload.html', {
-            'form': form,
-            'folder': folder
-        })
+    return render(request, 'file_handler/upload.html', {
+        'form': form,
+        'folder': folder
+    })
 
 
 @login_required

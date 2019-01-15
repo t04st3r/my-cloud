@@ -42,15 +42,15 @@ class FolderTestCases(TestCase):
 class DocumentTestCases(TestCase):
     """ Test for Document model """
 
-    TEST_FILE_NAME = 'test.txt'
-    TEST_FILE_MIME_TYPE = 'text/plain'
+    TEST_FILE_NAME = 'test.xml'
+    TEST_FILE_MIME_TYPE = 'text/xml'
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         folder = Folder.objects.create(name='Test Folder')
         with open(cls.TEST_FILE_NAME, 'w+') as test_file:
-            test_file.write('test\n')
+            test_file.write('<?xml version="1.0" encoding="UTF-8" standalone="no" ?>')
             Document.objects.create(name='Test File', file=File(test_file), folder=folder)
 
     def test_file_save(self):
@@ -77,6 +77,6 @@ class DocumentTestCases(TestCase):
     @classmethod
     def tearDownClass(cls):
         document = Document.objects.get(name='Test File')
-        os.remove('test.txt')
+        os.remove(cls.TEST_FILE_NAME)
         os.remove(document.file.path)
         super().tearDownClass()
