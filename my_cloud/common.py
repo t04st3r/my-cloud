@@ -118,5 +118,7 @@ class Common:
         'SCOPES': {'read': 'Read scope', 'write': 'Write scope'}
     }
 
+    AUTHENTICATION_BACKENDS = ['my_cloud.authentication.CustomAuthentication']
+
 
 
