@@ -13,7 +13,7 @@ class CustomAuthentication(ModelBackend):
                 user = user_model.objects.get(email=username)
             else:
                 user = user_model.objects.get(username=username)
-        except user_model.DoesNotExists:
+        except user_model.DoesNotExist:
             return None
         else:
             if self.user_can_authenticate(user) and user.check_password(password):
