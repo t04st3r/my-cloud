@@ -1,15 +1,18 @@
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
+from mptt.models import MPTTModel, TreeForeignKey
 import os
 import magic
 
 
-class Folder(models.Model):
+class Folder(MPTTModel):
     name = models.CharField(max_length=200)
     creation_date = models.DateTimeField(default=timezone.now, blank=True)
-    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
-    path = models.CharField(max_length=500, null=True, blank=True)
+    parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
+
+    class MPTTMeta:
+        order_insertion_by = ['id']
 
     def __str__(self):
         return self.name
