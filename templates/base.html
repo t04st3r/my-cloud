@@ -1,26 +1,33 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-    <title>My Cloud</title>
+      <meta charset="utf-8">
+      {% load static %}
+      <link rel='shortcut icon' href='{% static "my_cloud/img/favicon-my-cloud.ico" %}' />
+      <link rel="stylesheet" href='{% static "my_cloud/css/site.css" %}' />
+      <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+      <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+      <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-UHRtZLI+pbxtHCWp1t77Bi1L4ZtiqrqD80Kn4Z8NTSRyMA2Fd33n5dQ8lWUE00s/" crossorigin="anonymous">
+      <title>My Cloud</title>
   </head>
   <body>
     <div class="container">
-      <div class="row justify-content-center">
-        <div class="col-10">
-          <h1 class="mt-2">Welcome to My Cloud!</h1>
-           {% if not request.user.is_authenticated %}
-            <p><a href="/login">Log in</a></p>
-           {% else %}
-            <p><a href="/logout">Log out</a></p>
-           {% endif %}
-          <hr class="mt-0 mb-4">
+        <nav class="navbar navbar-dark sticky-top bg-primary">
+            <a class="navbar-brand" href="/"><i class="fas fa-cloud-download-alt"></i> My Cloud</a>
+            <ul class="navbar-nav ml-auto">
+                 <li class="nav-item">
+                     {% if not request.user.is_authenticated %}
+                        <a href="/login" class="nav-link">Log in</a>
+                     {% else %}
+                        <a href="/logout" class="nav-link">Log out</a>
+                    {% endif %}
+                 </li>
+            </ul>
+        </nav>
+        <div class="content_wrapper" style="margin-top:20px">
           {% block content %}
           {% endblock %}
         </div>
-      </div>
     </div>
   </body>
 </html>

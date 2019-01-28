@@ -1,75 +1,84 @@
 {% extends 'base.html' %}
 
+{% block content %}
+
 {% block title %}<h4>folder {{ root.name }}</h4>{% endblock %}
 
-{% block content %}
+<h5><a class="btn btn-primary" href="/create/"><i class="far fa-plus-square"></i> Create Folder</a>&nbsp;<a class="btn btn-primary" href="/upload/{{ root.id }}/"><i class="fas fa-file-upload"></i> Upload Files</a></h5>
+
+<table class="table">
+    <thead class="thead-dark">
+    <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Created at</th>
+        <th scope="col">Action</th>
+    </tr>
+    </thead>
+    <tbody>
+
+        <tr>
+        <td><a href="#"><i class="far fa-folder"></i> .</a></td>
+        <td></td>
+        <td></td>
+    </tr>
+
+    <tr>
 
     {% if root.parent %}
 
-        <h5><a href="/folder/{{ root.parent.id }}">Back to parent folder ({{ root.parent.name }})</a></h5>
+        <td><a href="/folder/{{ root.parent.id }}"><i class="far fa-folder"></i> ..</a></td>
 
-    {% else %}
+        {% else %}
 
-        <h5><a href="/">Back to parent folder</a></h5>
+        <td><a href="/"><i class="far fa-folder"></i> ..</a></td>
 
-    {% endif %}
+        {% endif %}
+
+        <td></td>
+        <td></td>
+    </tr>
 
     {% if children %}
 
-        <h5>children folders</h5>
+    {% for child in children %}
 
-        <ul>
+    <tr>
+        <td><a href="/folder/{{ child.id }}/"><i class="far fa-folder"></i> {{ child.name }}</a></td>
+        <td>{{ child.creation_date | date:'Y-m-d H:i' }}</td>
+        <td>
+            <form method="post" action="/delete/{{ child.id }}/">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="btn btn-danger"><i class="far fa-trash-alt"></i> Delete</button>
+            </form>
+        </td>
+    </tr>
 
-        {% for child in children %}
-
-            <li><a href="/folder/{{ child.id }}/">{{ child.name }}</a>
-                <form method="post" action="/delete/{{ child.id }}/">
-                    {% csrf_token %}
-                    {{ df_form.as_p }}
-                    <button type="submit">Delete Folder</button>
-                 </form>
-            </li>
-
-
-
-        {% endfor %}
-
-        </ul>
-
-    {% else %}
-
-        <p>folder {{ root.name }} has no children folders</p>
+    {% endfor %}
 
     {% endif %}
 
     {% if documents %}
 
-        <h5>documents</h5>
+    {% for document in documents %}
 
-        <ul>
+    <tr>
+        <td><a href="/download/{{ document.id }}/"><i class="far fa-file"></i> {{ document.name }} {{ document.filename }}</a></td>
+        <td>{{ document.creation_date | date:'Y-m-d H:i' }}</td>
+        <td>
+            <form method="post" action="/delete_doc/{{ document.id }}/">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="btn btn-danger"><i class="far fa-trash-alt"></i> Delete</button>
+            </form>
+        </td>
+    </tr>
 
-        {% for document in documents %}
-
-            <li>
-                <a href="/download/{{ document.id }}">{{ document.name }} ({{ document.filename }}) </a>
-                <form method="post" action="/delete_doc/{{ document.id }}/">
-                    {% csrf_token %}
-                    {{ dd_form.as_p }}
-                    <button type="submit">Delete File</button>
-                 </form>
-            </li>
-
-        {% endfor %}
-
-        </ul>
-
-    {% else %}
-
-        <p>folder {{ root.name }} is empty</p>
+    {% endfor %}
 
     {% endif %}
 
-    <h5><a href="/create/">Create Folder</a></h5>
-    <h5><a href="/upload/{{ root.id }}/">Upload Files</a></h5>
+    </tbody>
+</table>
 
 {% endblock %}

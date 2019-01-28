@@ -2,32 +2,52 @@
 
 {% block content %}
 
-    {% if root_folders %}
+{% block title %}<h4>folder root</h4>{% endblock %}
 
-        <h5>root folders</h5>
+<h5><a href="/create/" class="btn btn-primary"><i class="far fa-plus-square"></i> Create Folder</a></h5>
 
-        <ul>
+{% if root_folders %}
 
-        {% for folder in root_folders %}
+<table class="table">
+    <thead class="thead-dark">
+    <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Created at</th>
+        <th scope="col">Action</th>
+    </tr>
+    </thead>
+    <tbody>
 
-            <li><a href="folder/{{ folder.id }}/">{{ folder.name }}</a>
-                <form method="post" action="/delete/{{ folder.id }}/">
-                    {% csrf_token %}
-                    {{ form.as_p }}
-                    <button type="submit">Delete Folder</button>
-                 </form>
-            </li>
+    <tr>
+        <td><a href="/"><i class="far fa-folder"></i> .</a></td>
+        <td></td>
+        <td></td>
+    </tr>
 
-        {% endfor %}
+    {% for folder in root_folders %}
 
-        </ul>
+    <tr>
+        <td><a href="folder/{{ folder.id }}/"><i class="far fa-folder"></i> {{ folder.name }}</a></td>
+        <td>{{ folder.creation_date | date:'Y-m-d H:i' }}</td>
+        <td>
+            <form method="post" action="/delete/{{ folder.id }}/">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="btn btn-danger"><i class="far fa-trash-alt"></i> Delete</button>
+            </form>
+        </td>
+    </tr>
 
-    {% else %}
 
-        <p>Your filesystem is empty</p>
+    {% endfor %}
+    </tbody>
+</table>
 
-    {% endif %}
 
-    <h5><a href="/create/">Create Root Folder</a></h5>
+{% else %}
+
+<p>Your filesystem is empty</p>
+
+{% endif %}
 
 {% endblock %}

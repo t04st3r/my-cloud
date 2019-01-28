@@ -2,16 +2,18 @@
 
 {% block content %}
 
-  <form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Create</button>
-  </form>
-
-{% if folder %}
-  <h5><a href="/{{ folder.id }}">Back to {{ folder.name }}</a></h5>
-{% endif %}
-  <h5><a href="/">Back to Home</a></h5>
-
+<div class="card">
+    <div class="card-header">
+        Create new folder
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button class="btn btn-primary" type="submit"><i class="far fa-folder"></i> Create</button>
+            <a class="btn btn-primary" href="/"><i class="fas fa-tree"></i> Back to root</a>
+        </form>
+    </div>
+</div>
 
 {% endblock %}

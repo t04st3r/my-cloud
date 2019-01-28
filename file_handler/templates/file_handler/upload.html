@@ -1,13 +1,20 @@
 {% extends 'base.html' %}
 
 {% block content %}
-  <form method="post" enctype="multipart/form-data">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Upload</button>
-  </form>
 
-<h5><a href="/folder/{{ folder.id }}">Back to {{ folder.name }}</a></h5>
+<div class="card">
+    <div class="card-header">
+        Create new folder
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button class="btn btn-primary" type="submit"><i class="fas fa-file-upload"></i> Upload</button>
+            <a class="btn btn-primary" href="/folder/{{ folder.id }}"><i class="fas fa-arrow-circle-left"></i> Back to {{ folder.name }}</a>
+        </form>
+    </div>
+</div>
 
 {% endblock %}
 
