@@ -16,13 +16,6 @@ class FolderTestCases(TestCase):
         Folder.objects.create(name='parent2')
         Folder.objects.create(name='child', parent=parent)
 
-    def test_is_parent_folder(self):
-        """ Test parent-child relationship between two folders """
-        parent = Folder.objects.get(name='parent')
-        child = Folder.objects.get(name='child')
-        self.assertEqual(parent.parent, None)
-        self.assertEqual(child.parent, parent)
-
     def test_root_folders(self):
         """ Test lists of root folders """
         parent = Folder.objects.get(name='parent')
@@ -32,6 +25,17 @@ class FolderTestCases(TestCase):
         self.assertIn(parent, root_folders)
         self.assertIn(parent2, root_folders)
         self.assertNotIn(child, root_folders)
+
+    def test_is_empty(self):
+        """ Test is_empty method """
+        parent = Folder.objects.get(name='parent')
+        parent2 = Folder.objects.get(name='parent2')
+        child = Folder.objects.get(name='child')
+        self.assertTrue(child.is_empty())
+        self.assertFalse(parent.is_empty())
+        self.assertTrue(parent2.is_empty())
+        Document.objects.create(name="Test", file=None, folder=parent2)
+        self.assertFalse(parent2.is_empty())
 
     def test_folder_name(self):
         """ Test string representation of a folder """
@@ -63,6 +67,11 @@ class DocumentTestCases(TestCase):
         """ Test string representation of a document """
         document = Document.objects.get(name='Test File')
         self.assertEqual(document.name, str(document))
+
+    def test_file_path(self):
+        """ Test file complete path """
+        document = Document.objects.get(name='Test File')
+        self.assertEqual(document.file.path, document.file_path())
 
     def test_filename(self):
         """ Test document filename """

@@ -10,7 +10,13 @@
 
         {% for folder in root_folders %}
 
-            <li><a href="folder/{{ folder.id }}/">{{ folder.name }}</a></li>
+            <li><a href="folder/{{ folder.id }}/">{{ folder.name }}</a>
+                <form method="post" action="/delete/{{ folder.id }}/">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit">Delete Folder</button>
+                 </form>
+            </li>
 
         {% endfor %}
 

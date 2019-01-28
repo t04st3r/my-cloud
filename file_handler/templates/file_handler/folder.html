@@ -22,7 +22,15 @@
 
         {% for child in children %}
 
-            <li><a href="/folder/{{ child.id }}/">{{ child.name }}</a></li>
+            <li><a href="/folder/{{ child.id }}/">{{ child.name }}</a>
+                <form method="post" action="/delete/{{ child.id }}/">
+                    {% csrf_token %}
+                    {{ df_form.as_p }}
+                    <button type="submit">Delete Folder</button>
+                 </form>
+            </li>
+
+
 
         {% endfor %}
 
@@ -42,7 +50,14 @@
 
         {% for document in documents %}
 
-            <li><a href="/download/{{ document.id }}">{{ document.name }} ({{ document.filename }}) </a></li>
+            <li>
+                <a href="/download/{{ document.id }}">{{ document.name }} ({{ document.filename }}) </a>
+                <form method="post" action="/delete_doc/{{ document.id }}/">
+                    {% csrf_token %}
+                    {{ dd_form.as_p }}
+                    <button type="submit">Delete File</button>
+                 </form>
+            </li>
 
         {% endfor %}
 

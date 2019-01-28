@@ -6,6 +6,7 @@ from file_handler.models import Document
 from random import randint
 from django.core.files import File
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
 import os
 
 
@@ -23,8 +24,8 @@ class TestFileHandlerViews(TestCase):
         User.objects.create_user(cls.DUMMY_USERNAME, cls.DUMMY_EMAIL, cls.DUMMY_PASSWORD)
         # Create a root folder
         cls.root = Folder.objects.create(name='root', parent=None)
-        # create a list of test files
-        cls.files = [("test_{}.txt".format(idx), open("test_{}.txt".format(idx), 'w+')) for idx in range(1, 4)]
+        # create a list of test files, each file is a tuple (filename, file object)
+        cls.files = [("test_{}.txt".format(idx), open("test_{}.txt".format(idx), 'w+')) for idx in range(1, 7)]
         for file in cls.files:
             file[1].write('something to fill this up\n')
             file[1].seek(0)
@@ -93,6 +94,40 @@ class TestFileHandlerViews(TestCase):
         response_2 = self.client.get('/folder/' + str(test_folder.id) + '/')
         self.assertEqual(test_folder, response_2.context['root'])
 
+    def test_delete_doc(self):
+        """ Test for delete_doc view """
+        folder = Folder.objects.create(name="another folder", parent=self.root)
+        doc_to_delete = Document.objects.create(name=self.files[3][0], folder=folder, file=File(self.files[3][1]))
+        delete_url = '/delete_doc/' + str(doc_to_delete.id) + "/"
+        expected_url = '/folder/' + str(folder.id) + '/'
+        response = self.client.post(delete_url, follow=True)
+        self.assertRedirects(response, expected_url=expected_url, status_code=302, target_status_code=200)
+        self.assertFalse(os.path.isfile(doc_to_delete.file_path()))
+        self.assertRaises(ObjectDoesNotExist, lambda: Document.objects.get(pk=doc_to_delete.id))
+
+    def test_delete(self):
+        """ Test for (folder) delete view """
+        parent_folder = Folder.objects.create(name="parent", parent=None)
+        parent_doc = Document.objects.create(name=self.files[4][0], folder=parent_folder, file=File(self.files[4][1]))
+        child_folder = Folder.objects.create(name="child", parent=parent_folder)
+        child_doc = Document.objects.create(name=self.files[5][0], folder=child_folder, file=File(self.files[5][1]))
+        delete_url = '/delete/' + str(child_folder.id) + "/"
+        expected_url = '/folder/' + str(parent_folder.id) + '/'
+        response_1 = self.client.post(delete_url, follow=True)
+        self.assertRedirects(response_1, expected_url=expected_url, status_code=302, target_status_code=200)
+        self.assertRaises(ObjectDoesNotExist, lambda: Folder.objects.get(pk=child_folder.id))
+        self.assertFalse(os.path.isfile(child_doc.file_path()))
+        self.assertRaises(ObjectDoesNotExist, lambda: Document.objects.get(pk=child_doc.id))
+        delete_url = '/delete/' + str(parent_folder.id) + "/"
+        expected_url = '/'
+        response_2 = self.client.post(delete_url, follow=True)
+        self.assertRedirects(response_2, expected_url=expected_url, status_code=302, target_status_code=200)
+        self.assertRaises(ObjectDoesNotExist, lambda: Folder.objects.get(pk=parent_folder.id))
+        self.assertFalse(os.path.isfile(parent_doc.file_path()))
+        self.assertRaises(ObjectDoesNotExist, lambda: Document.objects.get(pk=parent_doc.id))
+
+
+
     @classmethod
     def tearDownClass(cls):
         # remove test files
@@ -107,3 +142,4 @@ class TestFileHandlerViews(TestCase):
         absolute_path = settings.MEDIA_ROOT + path
         if os.path.isfile(absolute_path):
             os.remove(absolute_path)
+

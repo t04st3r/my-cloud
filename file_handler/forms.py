@@ -13,3 +13,15 @@ class FolderForm(forms.ModelForm):
         model = Folder
         fields = ('name', 'parent')
 
+
+class DeleteDocumentForm(forms.ModelForm):
+    class Meta:
+        model = Document
+        fields = []
+
+
+class DeleteFolderForm(forms.ModelForm):
+    class Meta:
+        model = Folder
+        fields = []
+

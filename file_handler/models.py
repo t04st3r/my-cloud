@@ -19,7 +19,12 @@ class Folder(MPTTModel):
 
     @staticmethod
     def root_folders():
+        """ Return all root folders """
         return Folder.objects.filter(parent__isnull=True)
+
+    def is_empty(self):
+        """ Return true if the folder is empty """
+        return self.is_leaf_node() and self.document_set.count() == 0
 
 
 class Document(models.Model):
@@ -31,8 +36,14 @@ class Document(models.Model):
     def __str__(self):
         return self.name
 
+    def file_path(self):
+        """ Return complete path to the file """
+        return settings.MEDIA_ROOT + self.file.name
+
     def filename(self):
+        """ Return file name """
         return os.path.basename(self.file.name)
 
     def file_mime(self):
+        """ Return file mime type """
         return magic.from_file(settings.MEDIA_ROOT + self.file.name, mime=True)
