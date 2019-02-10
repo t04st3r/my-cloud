@@ -4,7 +4,7 @@ from . import views
 
 urlpatterns = [
     path('folder/', views.RootFolderList.as_view()),
-path('folder/<int:pk>/', views.FolderDetail.as_view()),
+    path('folder/<int:pk>/', views.FolderDetail.as_view()),
 ]
 
 urlpatterns += format_suffix_patterns(urlpatterns)

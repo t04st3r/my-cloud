@@ -36,6 +36,10 @@ class Document(models.Model):
     def __str__(self):
         return self.name
 
+    def file_url(self):
+        """ Return static path to the file """
+        return settings.MEDIA_URL + self.file.name
+
     def file_path(self):
         """ Return complete path to the file """
         return settings.MEDIA_ROOT + self.file.name
