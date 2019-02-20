@@ -28,6 +28,7 @@ class Common(Configuration):
         'oauth2_provider',
         'api',
         'mptt',
+        'file_handler.templatetags'
     ]
 
     MIDDLEWARE = [

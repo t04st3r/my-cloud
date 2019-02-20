@@ -1,8 +1,9 @@
 {% extends 'base.html' %}
+{% load file_handler_extras %}
 
 {% block content %}
 
-{% block title %}<h4>folder {{ root.name }}</h4>{% endblock %}
+{% block title %}<h4>{% breadcrumb root %}</h4>{% endblock %}
 
 <h5><a class="btn btn-primary" href="/create/"><i class="far fa-plus-square"></i> Create Folder</a>&nbsp;<a class="btn btn-primary" href="/upload/{{ root.id }}/"><i class="fas fa-file-upload"></i> Upload Files</a></h5>
 

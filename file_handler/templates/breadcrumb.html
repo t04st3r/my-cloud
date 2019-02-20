@@ -1,0 +1,5 @@
+<a href="/"><i class="far fa-folder"></i>&nbsp;&#47;root</a>
+
+{% for node in ancestors %}
+    <a href="/folder/{{ node.id }}"><i class="far fa-folder"></i>&nbsp;&#47;{{ node.name }}</a>&nbsp;
+{% endfor %}
