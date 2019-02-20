@@ -24,7 +24,7 @@ class Folder(MPTTModel):
 
     def is_empty(self):
         """ Return true if the folder is empty """
-        return self.is_leaf_node() and self.document_set.count() == 0
+        return self.is_leaf_node() and self.documents.count() == 0
 
 
 class Document(models.Model):

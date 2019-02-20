@@ -85,7 +85,7 @@ class TestFileHandlerViews(TestCase):
 
     def test_create(self):
         """ Test for create (folder) view """
-        create_url = '/create/'
+        create_url = '/create'
         expected_url = '/folder/' + str(self.root.id) + '/'
         response_1 = self.client.post(create_url, {'name': 'test_folder', 'parent': self.root.id}, follow=True)
         self.assertRedirects(response_1, expected_url=expected_url, status_code=302, target_status_code=200)
@@ -93,6 +93,10 @@ class TestFileHandlerViews(TestCase):
         self.assertEqual(test_folder.parent, self.root)
         response_2 = self.client.get('/folder/' + str(test_folder.id) + '/')
         self.assertEqual(test_folder, response_2.context['root'])
+        create_url_2 = '/create/' + str(test_folder.id) + '/'
+        expected_url_2 = '/folder/' + str(test_folder.id) + '/'
+        response_3 = self.client.post(create_url_2, {'name': 'test_folder_child', 'parent': test_folder.id}, follow=True)
+        self.assertRedirects(response_3, expected_url=expected_url_2, status_code=302, target_status_code=200)
 
     def test_delete_doc(self):
         """ Test for delete_doc view """
