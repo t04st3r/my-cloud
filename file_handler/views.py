@@ -62,8 +62,9 @@ def download(request, file_id):
 
 
 @login_required
-def create(request):
+def create(request, folder_id=None):
     """ create a folder """
+    parent = get_object_or_404(Folder, pk=folder_id) if folder_id is not None else None
     if request.method == 'POST':
         form = FolderForm(request.POST)
         if form.is_valid():
@@ -72,9 +73,10 @@ def create(request):
             return redirect('index')
         return redirect('folder', folder_id=form.instance.parent_id)
     else:
-        form = FolderForm()
+        form = FolderForm(initial={'parent': parent})
         return render(request, 'file_handler/new_folder.html', {
             'form': form,
+            'parent': parent
         })
 
 

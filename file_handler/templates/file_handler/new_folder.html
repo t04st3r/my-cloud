@@ -11,7 +11,11 @@
             {% csrf_token %}
             {{ form.as_p }}
             <button class="btn btn-primary" type="submit"><i class="far fa-folder"></i> Create</button>
-            <a class="btn btn-primary" href="/"><i class="fas fa-tree"></i> Back to root</a>
+            {% if parent is None %}
+                <a class="btn btn-primary" href="/"><i class="fas fa-tree"></i> Back to root</a>
+            {% else %}
+                <a class="btn btn-primary" href="/folder/{{ parent.id }}"><i class="fas fa-folder-open"></i> Back to {{ parent.name }}</a>
+            {% endif %}
         </form>
     </div>
 </div>
