@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 from django.conf import settings
 from mptt.models import MPTTModel, TreeForeignKey
+from shared_secret.models import ShamirSS
 import os
 import magic
 
@@ -31,8 +32,8 @@ class Document(models.Model):
     name = models.CharField(max_length=200)
     file = models.FileField(upload_to='documents/%Y/%m/%d/')
     creation_date = models.DateTimeField(default=timezone.now, blank=True)
-    locked = models.BooleanField(default=False)
     folder = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True, related_name='documents')
+    scheme = models.ForeignKey(ShamirSS, on_delete=models.CASCADE, null=True)
 
     def __str__(self):
         return self.name

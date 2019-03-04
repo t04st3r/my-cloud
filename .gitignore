@@ -1,6 +1,6 @@
 /.idea/*
 /media/*
 /static/*
-!/static/my_cloud/*
+!/static/my_cloud/
 /__pycache__/
 /mycloudvenv/

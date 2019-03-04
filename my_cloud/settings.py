@@ -23,6 +23,7 @@ class Common(Configuration):
         'django.contrib.messages',
         'django.contrib.staticfiles',
         'file_handler.apps.FileHandlerConfig',
+        'shared_secret.apps.SharedSecretConfig',
         'crispy_forms',
         'rest_framework',
         'oauth2_provider',
