@@ -31,6 +31,7 @@ class Document(models.Model):
     name = models.CharField(max_length=200)
     file = models.FileField(upload_to='documents/%Y/%m/%d/')
     creation_date = models.DateTimeField(default=timezone.now, blank=True)
+    locked = models.BooleanField(default=False)
     folder = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True, related_name='documents')
 
     def __str__(self):

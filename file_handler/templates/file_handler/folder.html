@@ -64,7 +64,13 @@
     {% for document in documents %}
 
     <tr>
-        <td><a href="/download/{{ document.id }}/"><i class="far fa-file"></i> {{ document.name }} {{ document.filename }}</a></td>
+        <td><a href="/download/{{ document.id }}/"><i class="far fa-file"></i> {{ document.name }} {{ document.filename }}</a>
+            {% if document.locked %}
+                <i class="fas fa-lock"></i>
+            {% else %}
+                <i class="fas fa-lock-open"></i>
+            {% endif %}
+        </td>
         <td>{{ document.creation_date | date:'Y-m-d H:i' }}</td>
         <td>
             <form method="post" action="/delete_doc/{{ document.id }}/">
