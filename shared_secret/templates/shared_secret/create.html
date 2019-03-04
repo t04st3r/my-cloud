@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="card">
+    <div class="card-header">
+        Create new scheme
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button class="btn btn-primary" type="submit"><i class="fas fa-cogs"></i> Create</button>
+            <a class="btn btn-primary" href="/s"><i class="far fa-list-alt"></i> Back to schemes</a>
+            <a class="btn btn-primary" href="/"><i class="fas fa-list-ul"></i> Back to files</a>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

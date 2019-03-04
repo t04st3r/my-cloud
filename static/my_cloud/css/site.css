@@ -5,3 +5,7 @@ a {
 .enc_dec {
     margin-left: 10px;
 }
+
+.nav > li > a {
+    color: white;
+}
