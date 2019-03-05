@@ -31,7 +31,7 @@
     <tr>
         <td>{{ share.0 }}</td>
         <td id="share-{{ share.0 }}">{{ share.1 }}</td>
-        <td><a href="#" data-share="share-{{ share.0 }}" class="btn btn-warning float-right" onclick=""><i
+        <td><a href="#" data-share="share-{{ share.0 }}" class="btn btn-warning float-right clip"><i
                 class="far fa-clone"></i> Copy to clipboard</a></td>
     </tr>
 
@@ -44,12 +44,14 @@
     $('.clip').on('click', function(e){
         e.preventDefault()
         var id = $(this).data('share')
-        var copyText = document.getElementById(id)
-        copyText.select()
-        document.execCommand("copy")
-        alert('Done!')
+        var text = $('#' + id).text()
+        var $temp = $("<input>")
+        $("body").append($temp)
+        $temp.val(text).select()
+        document.execCommand("copy");
+        $temp.remove();
+        alert('done!')
     });
-
 </script>
 
 

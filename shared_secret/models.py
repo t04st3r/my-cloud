@@ -12,7 +12,6 @@ class ShamirSS(models.Model):
         (89, '89'),
         (107, '107'),
         (127, '127'),
-        (521, '521'),
     )
 
     K_CHOICES = (
