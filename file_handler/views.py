@@ -70,7 +70,7 @@ def create(request, folder_id=None):
         if form.is_valid():
             form.save()
         if form.instance.parent_id is None:
-            return redirect('index')
+            return redirect('/')
         return redirect('folder', folder_id=form.instance.parent_id)
     else:
         form = FolderForm(initial={'parent': parent})
@@ -103,5 +103,5 @@ def delete(request, folder_id):
         if form.is_valid():
             folder.delete()
         if parent is None:
-            return redirect('index')
+            return redirect('/')
         return redirect('folder', folder_id=parent.id)

@@ -19,7 +19,7 @@ class SSForm(forms.ModelForm):
         n = cleaned_data.get('n')
         k = cleaned_data.get('k')
         if k and n and int(k) > int(n):
-            raise forms.ValidationError("The value of k cannot be greater than n !! (k = {} n = {})".format(k, n))
+            raise forms.ValidationError("The value of k cannot be greater than n (k = {} n = {})".format(k, n))
 
 
 class DivErrorList(forms.utils.ErrorList):
