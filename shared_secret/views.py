@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import ShamirSS
 from .forms import SSForm, DivErrorList
@@ -24,4 +24,13 @@ def create(request):
         form = SSForm()
     return render(request, 'shared_secret/create.html', {
         'form': form
+    })
+
+@login_required
+def generate(request, scheme_id):
+    scheme = get_object_or_404(ShamirSS, pk=scheme_id)
+    shares = scheme.get_shares()
+    return render(request, 'shared_secret/generate.html', {
+        'shares': shares,
+        'scheme': scheme
     })

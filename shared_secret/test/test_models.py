@@ -41,17 +41,21 @@ class ShamirSSTestCase(TestCase):
 
     def test_scheme_correctness(self):
         """ Test for successful shares generation and secret recovery """
-        secret, shares = self.scheme.get_shares()
+        shares = self.scheme.get_shares(include_secret=True)
+        secret = shares[-1]
+        del shares[-1]
         self.assertTrue(len(shares) == self.scheme.n)
         rnd_shares = self._pick_k_random_values(shares, self.scheme.k)
         rec_secret = self.scheme.get_secret(rnd_shares)
         self.assertTrue(secret, rec_secret)
+        rec_secret_all = self.scheme.get_secret(shares)
+        self.assertTrue(secret, rec_secret_all)
         rnd_shares_2 = self._pick_k_random_values(shares, self.scheme.k - 1)
         self.assertRaises(ValueError, lambda: self.scheme.get_secret(rnd_shares_2))
 
     def _pick_k_random_values(self, l, k):
-        """ select k distinct random values from l"""
+        """ select k distinct random values from l """
         s = set()
-        while len(s) < k:
-            s = s.union(set(random.choices(population=l, k=k)))
+        while len(s) != k:
+            s.add(random.choice(l))
         return list(s)

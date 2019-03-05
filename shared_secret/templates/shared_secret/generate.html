@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+{% block title %}<h4>Here are your shares!</h4>{% endblock %}
+
+<div class="alert alert-danger" role="alert">
+    <p><strong>Be careful!</strong></p>
+    <ul>
+    <li><p>those shares are not stored anywhere and you won't be able to recover your encrypted
+        files if you lose at least {{ scheme.k }} of it</p></li>
+    <li><p>make sure to save them in a safe place or distribute them among your trusted partners, to recover your files you
+        would need at least {{ scheme.k }} shares</p></li>
+    </ul>
+</div>
+<h5><a href="/s/gen/{{ scheme.id }}" class="btn btn-primary"><i class="far fa-plus-square"></i> Rigenerate</a></h5>
+
+<table class="table">
+    <thead class="thead-dark">
+    <tr>
+        <th scope="col"># Share</th>
+        <th scope="col">Share value</th>
+        <th scope="col">Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+
+
+    {% for share in shares %}
+
+    <tr>
+        <td>{{ share.0 }}</td>
+        <td id="share-{{ share.0 }}">{{ share.1 }}</td>
+        <td><a href="#" data-share="share-{{ share.0 }}" class="btn btn-warning float-right" onclick=""><i
+                class="far fa-clone"></i> Copy to clipboard</a></td>
+    </tr>
+
+
+    {% endfor %}
+    </tbody>
+</table>
+
+<script>
+    $('.clip').on('click', function(e){
+        e.preventDefault()
+        var id = $(this).data('share')
+        var copyText = document.getElementById(id)
+        copyText.select()
+        document.execCommand("copy")
+        alert('Done!')
+    });
+
+</script>
+
+
+{% endblock %}

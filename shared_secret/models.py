@@ -28,10 +28,11 @@ class ShamirSS(models.Model):
     k = models.IntegerField(choices=K_CHOICES)
     n = models.IntegerField(choices=N_CHOICES)
 
-    def get_shares(self):
-        """ return the n shares  """
+    def get_shares(self, include_secret=False):
+        """ return the n shares and the secret if enabled """
         prime = (2**self.mers_exp) - 1
-        return self._generate_shares(self.k, self.n, prime)
+        shares = self._generate_shares(self.k, self.n, prime)
+        return shares if include_secret else shares[:-1]
 
     def get_secret(self, shares):
         """ recover the secret given at least k shares """
@@ -54,14 +55,15 @@ class ShamirSS(models.Model):
 
     def _generate_shares(self, minimum, shares, prime):
         """ Generates a random shamir pool, returns the secret and the share
-        points."""
+        points as a list where the last item is the secret."""
         _RINT = functools.partial(random.SystemRandom().randint, 0)
         if minimum > shares:
             raise ValueError("pool secret would be irrecoverable")
         poly = [_RINT(prime) for i in range(minimum)]
         points = [(i, self._eval_at(poly, i, prime))
                   for i in range(1, shares + 1)]
-        return poly[0], points
+        points.append(poly[0])
+        return points
 
     def _extended_gcd(self, a, b):
         """
