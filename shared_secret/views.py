@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import ShamirSS
 from file_handler.models import Document
-from .forms import SSForm, DivErrorList
+from .forms import SSForm, EncryptForm, DivErrorList
 
 
 @login_required
@@ -46,13 +46,16 @@ def encrypt(request, document_id, scheme_id):
     document = get_object_or_404(Document, pk=document_id)
     scheme = get_object_or_404(ShamirSS, pk=scheme_id)
     if request.method == 'POST':
-        form = SSForm(request.POST)
+        form = EncryptForm(scheme.k, request.POST)
         if form.is_valid():
             form.save()
-            return redirect('index')
+            return redirect('/folder/{}'.format(document.folder_id))
     else:
-        form = SSForm()
-    return render(request, 'shared_secret/create.html', {
-        'form': form
+        form = EncryptForm(scheme.k, initial={'scheme': scheme})
+    return render(request, 'shared_secret/encrypt.html', {
+        'form': form,
+        'document': document,
+        'scheme': scheme
+
     })
 

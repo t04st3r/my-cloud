@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="card">
+    <div class="card-header">
+        Encrypt file {{document.name}} ({{document.filename}})
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button class="btn btn-primary" type="submit"><i class="fas fa-file-upload"></i> Encrypt</button>
+            <a class="btn btn-primary" href="/folder/{{ document.folder_id }}"><i class="fas fa-arrow-circle-left"></i> Back to {{ document.folder.name }}</a>
+        </form>
+    </div>
+</div>
+
+<script>
+
+    $('#id_scheme').on('change', function(){
+        var id = $(this).val()
+        var splitted_path = window.location.pathname.split('/')
+        splitted_path.pop()
+        splitted_path.pop()
+        splitted_path.push(id)
+        var pathname = splitted_path.join('/')
+        location.pathname = pathname
+
+    })
+
+</script>
+
+{% endblock %}

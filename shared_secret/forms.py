@@ -3,7 +3,20 @@ from file_handler.models import ShamirSS
 
 
 class EncryptForm(forms.Form):
-    pass
+    """ dynamic number of fields based on scheme """
+    def __init__(self, n_shares=None, *args, **kwargs):
+        super(EncryptForm, self).__init__(*args, **kwargs)
+        if n_shares is not None:
+            for i in range(0, n_shares):
+                fieldname = "share_{}".format(i + 1)
+                self.fields[fieldname] = forms.IntegerField()
+                self.fields[fieldname].widget = forms.TextInput()
+
+    scheme = forms.ModelChoiceField(queryset=ShamirSS.objects.all(), empty_label=None)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        # TBD
 
 
 class SSForm(forms.ModelForm):

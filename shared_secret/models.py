@@ -30,7 +30,7 @@ class ShamirSS(models.Model):
     secret = models.CharField(max_length=128)
 
     def __str__(self):
-        return "{} (k : {}, n: {}, size: 2^{} - 1)".format(self.name, self.k, self.n, self.mers_exp)
+        return "{} [k : {} n : {}]".format(self.name, self.k, self.n, self.mers_exp)
 
     def get_shares(self):
         """ return the n shares and store hashed secret """

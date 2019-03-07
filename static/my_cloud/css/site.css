@@ -17,3 +17,7 @@ table {
 th.fixed-header {
     width: 20%;
 }
+
+.share-field {
+    width: 500px;
+}
