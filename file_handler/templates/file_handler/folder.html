@@ -11,8 +11,8 @@
     <thead class="thead-dark">
     <tr>
         <th scope="col">Name</th>
-        <th scope="col">Created at</th>
-        <th scope="col">Action</th>
+        <th scope="col" class="fixed-header">Created at</th>
+        <th scope="col" class="fixed-header">Action</th>
     </tr>
     </thead>
     <tbody>
@@ -41,46 +41,50 @@
 
     {% if children %}
 
-    {% for child in children %}
+        {% for child in children %}
 
-    <tr>
-        <td><a href="/folder/{{ child.id }}/"><i class="far fa-folder"></i> {{ child.name }}</a></td>
-        <td>{{ child.creation_date | date:'Y-m-d H:i' }}</td>
-        <td>
-            <form method="post" action="/delete/{{ child.id }}/">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <button type="submit" class="btn btn-danger float-right"><i class="far fa-trash-alt"></i> Delete</button>
-            </form>
-        </td>
-    </tr>
+        <tr>
+            <td><a href="/folder/{{ child.id }}/"><i class="far fa-folder"></i> {{ child.name }}</a></td>
+            <td>{{ child.creation_date | date:'Y-m-d H:i' }}</td>
+            <td>
+                <form method="post" action="/delete/{{ child.id }}/">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-danger float-right"><i class="far fa-trash-alt"></i> Delete</button>
+                </form>
+            </td>
+        </tr>
 
-    {% endfor %}
+        {% endfor %}
 
     {% endif %}
 
     {% if documents %}
 
-    {% for document in documents %}
+        {% for document in documents %}
 
-    <tr>
-        <td><a href="/download/{{ document.id }}/"><i class="far fa-file"></i> {{ document.name }} {{ document.filename }}</a></td>
-        <td>{{ document.creation_date | date:'Y-m-d H:i' }}</td>
-        <td>
-            {% if document.scheme is not null %}
-                <a href="#" class="btn btn-success float-right enc_dec"><i class="fas fa-lock-open"></i> Decrypt</a>
-            {% else %}
-                <a href="#" class="btn btn-warning float-right enc_dec"><i class="fas fa-lock"></i> Encrypt</a>
-            {% endif %}
-            <form method="post" action="/delete_doc/{{ document.id }}/">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <button type="submit" class="btn btn-danger float-right"><i class="far fa-trash-alt"></i> Delete</button>
-            </form>
-        </td>
-    </tr>
+        <tr>
+            <td><a href="/download/{{ document.id }}/"><i class="far fa-file"></i> {{ document.name }} {{ document.filename }}</a></td>
+            <td>{{ document.creation_date | date:'Y-m-d H:i' }}</td>
+            <td>
+                {% if document.scheme == None %}
+                    {% if scheme == None %}
+                        <a href="#" class="btn btn-secondary float-right enc_dec" title="Create at least one scheme to encrypt your file"><i class="fas fa-lock"></i> Encrypt</a>
+                    {% else %}
+                        <a href="/s/encrypt/{{document.id}}/{{ scheme.id }}" class="btn btn-warning float-right enc_dec"><i class="fas fa-lock"></i> Encrypt</a>
+                    {% endif %}
+                {% else %}
+                    <a href="#" class="btn btn-success float-right enc_dec"><i class="fas fa-lock-open"></i> Decrypt</a>
+                {% endif %}
+                <form method="post" action="/delete_doc/{{ document.id }}/">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-danger float-right"><i class="far fa-trash-alt"></i> Delete</button>
+                </form>
+            </td>
+        </tr>
 
-    {% endfor %}
+        {% endfor %}
 
     {% endif %}
 

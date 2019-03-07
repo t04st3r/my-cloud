@@ -7,3 +7,4 @@ django-crispy-forms==1.7.2
 djangorestframework==3.9.0
 django-oauth-toolkit==1.2.0
 django-mptt==0.9.1
+cryptography==2.6.1

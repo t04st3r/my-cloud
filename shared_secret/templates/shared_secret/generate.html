@@ -7,13 +7,15 @@
 <div class="alert alert-danger" role="alert">
     <p><strong>Be careful!</strong></p>
     <ul>
-    <li><p>those shares are not stored anywhere and you won't be able to recover your encrypted
-        files if you lose at least {{ scheme.k }} of it</p></li>
-    <li><p>make sure to save them in a safe place or distribute them among your trusted partners, to recover your files you
-        would need at least {{ scheme.k }} shares</p></li>
+        <li><p>those shares are not stored anywhere and you won't be able to recover your encrypted
+            files if you lose at least {{ scheme.k }} of it</p></li>
+        <li><p>make sure to save them in a safe place or distribute them among your trusted partners, to recover your
+            files you
+            would need at least {{ scheme.k }} shares</p></li>
     </ul>
 </div>
-<h5><a href="/s/gen/{{ scheme.id }}" class="btn btn-primary"><i class="far fa-plus-square"></i> Rigenerate</a></h5>
+<h5><a href="/s/gen/{{ scheme.id }}" id="json-dl" class="btn btn-primary"><i class="fas fa-file-download"></i> Download
+    JSON</a></h5>
 
 <table class="table">
     <thead class="thead-dark">
@@ -30,7 +32,7 @@
 
     <tr>
         <td>{{ share.0 }}</td>
-        <td id="share-{{ share.0 }}">{{ share.1 }}</td>
+        <td id="share-{{ share.0 }}" class="shares">{{ share.1 }}</td>
         <td><a href="#" data-share="share-{{ share.0 }}" class="btn btn-warning float-right clip"><i
                 class="far fa-clone"></i> Copy to clipboard</a></td>
     </tr>
@@ -41,6 +43,30 @@
 </table>
 
 <script>
+
+    $('#json-dl').on('click', function(e){
+        e.preventDefault()
+        var json_obj = {}
+        var count = 1
+        $('.shares').each(function(){
+            var key = 'share ' + count
+            json_obj[key] = $(this).text()
+            count++
+        })
+        download('data.json', JSON.stringify(json_obj))
+
+    })
+
+    function download(filename, text) {
+        var element = document.createElement('a')
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text))
+        element.setAttribute('download', filename)
+        element.style.display = 'none'
+        document.body.appendChild(element)
+        element.click()
+        document.body.removeChild(element)
+}
+
     $('.clip').on('click', function(e){
         e.preventDefault()
         var id = $(this).data('share')
@@ -48,10 +74,11 @@
         var $temp = $("<input>")
         $("body").append($temp)
         $temp.val(text).select()
-        document.execCommand("copy");
-        $temp.remove();
+        document.execCommand("copy")
+        $temp.remove()
         alert('done!')
     });
+
 </script>
 
 

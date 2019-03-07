@@ -2,6 +2,10 @@ from django import forms
 from file_handler.models import ShamirSS
 
 
+class EncryptForm(forms.Form):
+    pass
+
+
 class SSForm(forms.ModelForm):
 
     class Meta:

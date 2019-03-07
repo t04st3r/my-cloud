@@ -1,6 +1,8 @@
 from django.test import TestCase
 from shared_secret.models import ShamirSS
 from shared_secret.forms import SSForm
+import django.contrib.auth.hashers as hashers
+from string import digits
 import random
 
 
@@ -41,17 +43,27 @@ class ShamirSSTestCase(TestCase):
 
     def test_scheme_correctness(self):
         """ Test for successful shares generation and secret recovery """
-        shares = self.scheme.get_shares(include_secret=True)
-        secret = shares[-1]
-        del shares[-1]
+        # check all shares generated correctly
+        shares = self.scheme.get_shares()
+        encoded_secret = self.scheme.secret
         self.assertTrue(len(shares) == self.scheme.n)
+        # check hashed secret is correct picking k random shares
         rnd_shares = self._pick_k_random_values(shares, self.scheme.k)
         rec_secret = self.scheme.get_secret(rnd_shares)
-        self.assertTrue(secret, rec_secret)
-        rec_secret_all = self.scheme.get_secret(shares)
-        self.assertTrue(secret, rec_secret_all)
+        self.assertTrue(hashers.check_password(str(rec_secret), encoded_secret))
+        # check hashed secret is correct picking n random shares
+        secret_all = self.scheme.get_secret(shares)
+        self.assertTrue(hashers.check_password(str(secret_all), encoded_secret))
+        # check value error if lower tha k shares provided
         rnd_shares_2 = self._pick_k_random_values(shares, self.scheme.k - 1)
         self.assertRaises(ValueError, lambda: self.scheme.get_secret(rnd_shares_2))
+        # check for wrong shares
+        rnd_shares_3 = self._pick_k_random_values(shares, self.scheme.k)
+        rnd_shares_3[0] = (rnd_shares_3[0][0], int(
+            ''.join(random.choice(digits) for i in range(len(str(rnd_shares_3[0][1])))))
+        )
+        wrong_secret = self.scheme.get_secret(rnd_shares_3)
+        self.assertFalse(hashers.check_password(str(wrong_secret), encoded_secret))
 
     def _pick_k_random_values(self, l, k):
         """ select k distinct random values from l """

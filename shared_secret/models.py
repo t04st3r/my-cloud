@@ -1,6 +1,7 @@
 from django.db import models
 import random
 import functools
+from django.contrib.auth.hashers import make_password
 
 
 class ShamirSS(models.Model):
@@ -26,12 +27,20 @@ class ShamirSS(models.Model):
     mers_exp = models.IntegerField(choices=MERSENNE_EXP_VALUES)
     k = models.IntegerField(choices=K_CHOICES)
     n = models.IntegerField(choices=N_CHOICES)
+    secret = models.CharField(max_length=128)
 
-    def get_shares(self, include_secret=False):
-        """ return the n shares and the secret if enabled """
+    def __str__(self):
+        return "{} (k : {}, n: {}, size: 2^{} - 1)".format(self.name, self.k, self.n, self.mers_exp)
+
+    def get_shares(self):
+        """ return the n shares and store hashed secret """
         prime = (2**self.mers_exp) - 1
         shares = self._generate_shares(self.k, self.n, prime)
-        return shares if include_secret else shares[:-1]
+        secret = str(shares[-1])
+        del shares[-1]
+        hashed_secret = make_password(secret)
+        self.secret = hashed_secret
+        return shares
 
     def get_secret(self, shares):
         """ recover the secret given at least k shares """

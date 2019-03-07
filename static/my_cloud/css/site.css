@@ -9,3 +9,11 @@ a {
 .nav > li > a {
     color: white;
 }
+
+table {
+    table-layout: fixed;
+}
+
+th.fixed-header {
+    width: 20%;
+}

@@ -2,8 +2,10 @@ from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
 from django.utils.encoding import smart_str
 from file_handler.forms import DocumentForm, FolderForm, DeleteDocumentForm, DeleteFolderForm
 from .models import Folder, Document
+from shared_secret.models import ShamirSS
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseNotAllowed
+from .utils import get_earliest_objects_or_none
 
 
 @login_required
@@ -40,6 +42,7 @@ def folder(request, folder_id):
     root = get_object_or_404(Folder, pk=folder_id)
     children = Folder.objects.filter(parent=folder_id)
     documents = Document.objects.filter(folder=folder_id)
+    scheme = get_earliest_objects_or_none(ShamirSS)
     dd_form = DeleteDocumentForm()
     df_form = DeleteFolderForm()
     return render(request, 'file_handler/folder.html', {
@@ -47,7 +50,8 @@ def folder(request, folder_id):
         'children': children,
         'documents': documents,
         'dd_form': dd_form,
-        'df_form': df_form
+        'df_form': df_form,
+        'scheme': scheme
     })
 
 

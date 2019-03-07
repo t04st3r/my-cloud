@@ -1,11 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from .models import ShamirSS
+from file_handler.models import Document
 from .forms import SSForm, DivErrorList
 
 
 @login_required
 def index(request):
+    """ list all scheme available """
     schemes = ShamirSS.objects.all()
     return render(request, 'shared_secret/index.html', {
         'schemes': schemes
@@ -18,6 +20,34 @@ def create(request):
     if request.method == 'POST':
         form = SSForm(request.POST, error_class=DivErrorList)
         if form.is_valid():
+            # get shares and store hashed secret
+            shares = form.instance.get_shares()
+            form.save()
+            return render(request, 'shared_secret/generate.html', {
+                'shares': shares,
+                'scheme': form.instance
+            })
+    else:
+        form = SSForm()
+    return render(request, 'shared_secret/create.html', {
+        'form': form
+    })
+
+
+def refresh(request, scheme_id):
+    # TBD
+    pass
+
+
+@login_required
+def encrypt(request, document_id, scheme_id):
+    """ encrypt a document """
+    # TBD
+    document = get_object_or_404(Document, pk=document_id)
+    scheme = get_object_or_404(ShamirSS, pk=scheme_id)
+    if request.method == 'POST':
+        form = SSForm(request.POST)
+        if form.is_valid():
             form.save()
             return redirect('index')
     else:
@@ -26,11 +56,3 @@ def create(request):
         'form': form
     })
 
-@login_required
-def generate(request, scheme_id):
-    scheme = get_object_or_404(ShamirSS, pk=scheme_id)
-    shares = scheme.get_shares()
-    return render(request, 'shared_secret/generate.html', {
-        'shares': shares,
-        'scheme': scheme
-    })
