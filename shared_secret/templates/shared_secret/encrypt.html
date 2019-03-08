@@ -2,6 +2,10 @@
 
 {% block content %}
 
+<div class="alert alert-info" role="alert">
+    <p>Insert at least {{ scheme.k }} shares to encrypt your file, be careful to place each share in its right position</p>
+</div>
+
 <div class="card">
     <div class="card-header">
         Encrypt file {{document.name}} ({{document.filename}})
@@ -10,7 +14,7 @@
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
-            <button class="btn btn-primary" type="submit"><i class="fas fa-file-upload"></i> Encrypt</button>
+            <button class="btn btn-primary" type="submit"><i class="fas fa-user-secret"></i> Encrypt</button>
             <a class="btn btn-primary" href="/folder/{{ document.folder_id }}"><i class="fas fa-arrow-circle-left"></i> Back to {{ document.folder.name }}</a>
         </form>
     </div>

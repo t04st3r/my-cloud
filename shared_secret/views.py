@@ -42,20 +42,17 @@ def refresh(request, scheme_id):
 @login_required
 def encrypt(request, document_id, scheme_id):
     """ encrypt a document """
-    # TBD
     document = get_object_or_404(Document, pk=document_id)
     scheme = get_object_or_404(ShamirSS, pk=scheme_id)
     if request.method == 'POST':
-        form = EncryptForm(scheme.k, request.POST)
-        if form.is_valid():
-            form.save()
+        form = EncryptForm(scheme.n, request.POST, error_class=DivErrorList)
+        if form.is_valid() and form.save(document):
             return redirect('/folder/{}'.format(document.folder_id))
     else:
-        form = EncryptForm(scheme.k, initial={'scheme': scheme})
+        form = EncryptForm(scheme.n, initial={'scheme': scheme}, error_class=DivErrorList)
     return render(request, 'shared_secret/encrypt.html', {
         'form': form,
         'document': document,
         'scheme': scheme
-
     })
 

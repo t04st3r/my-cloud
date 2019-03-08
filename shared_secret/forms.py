@@ -1,22 +1,51 @@
 from django import forms
-from file_handler.models import ShamirSS
+from shared_secret.models import ShamirSS
+from django.core.files import File
+import os
 
 
 class EncryptForm(forms.Form):
-    """ dynamic number of fields based on scheme """
+    """ dynamic number of shares fields based n_shares """
+
+    scheme = forms.ModelChoiceField(queryset=ShamirSS.objects.all(), empty_label=None)
+
     def __init__(self, n_shares=None, *args, **kwargs):
         super(EncryptForm, self).__init__(*args, **kwargs)
         if n_shares is not None:
             for i in range(0, n_shares):
-                fieldname = "share_{}".format(i + 1)
-                self.fields[fieldname] = forms.IntegerField()
-                self.fields[fieldname].widget = forms.TextInput()
+                field_name = "share_{}".format(i + 1)
+                self.fields[field_name] = forms.IntegerField(required=False)
+                self.fields[field_name].widget = forms.TextInput()
 
-    scheme = forms.ModelChoiceField(queryset=ShamirSS.objects.all(), empty_label=None)
+    def get_shares(self):
+        """ return submitted shares and scheme """
+        cleaned_data = super().clean()
+        shares = []
+        scheme = cleaned_data.get('scheme')
+        for i in range(0, scheme.n):
+            share = cleaned_data.get("share_{}".format(i + 1))
+            if share is not None:
+                shares.append((i + 1, share))
+        return scheme, shares
 
     def clean(self):
-        cleaned_data = super().clean()
-        # TBD
+        """ validate min number of shares and if shares can recover the secret """
+        scheme, shares = self.get_shares()
+        if len(shares) < scheme.k:
+            raise forms.ValidationError("At least {} shares are needed to encrypt the file".format(scheme.k))
+        if not scheme.validate_shares(shares):
+            raise forms.ValidationError("Wrong shares values")
+
+    def save(self, document):
+        """ encrypt the document file and update its model, return True if everything goes smooth """
+        scheme, shares = self.get_shares()
+        enc_file_path = scheme.encrypt_file(document.file_path(), shares)
+        if enc_file_path is None:
+            return False
+        os.remove(document.file_path())
+        document.file = File(open(enc_file_path, 'r'))
+        document.save()
+        return True
 
 
 class SSForm(forms.ModelForm):

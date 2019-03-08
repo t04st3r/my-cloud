@@ -1,7 +1,10 @@
-from django.db import models
 import random
 import functools
-from django.contrib.auth.hashers import make_password
+import base64
+from django.db import models
+import django.contrib.auth.hashers as hashers
+from cryptography.fernet import Fernet
+from pathlib import Path
 
 
 class ShamirSS(models.Model):
@@ -30,17 +33,24 @@ class ShamirSS(models.Model):
     secret = models.CharField(max_length=128)
 
     def __str__(self):
-        return "{} [k : {} n : {}]".format(self.name, self.k, self.n, self.mers_exp)
+        return "{} ({}, {})".format(self.name, self.k, self.n)
 
     def get_shares(self):
-        """ return the n shares and store hashed secret """
+        """ generate n shares and store hashed secret """
         prime = (2**self.mers_exp) - 1
         shares = self._generate_shares(self.k, self.n, prime)
         secret = str(shares[-1])
         del shares[-1]
-        hashed_secret = make_password(secret)
+        hashed_secret = hashers.make_password(secret)
         self.secret = hashed_secret
         return shares
+
+    def validate_shares(self, shares):
+        """ return true if shares match with secret """
+        if not isinstance(shares, list):
+            raise ValueError('unrecognized data')
+        secret = self.get_secret(shares)
+        return hashers.check_password(str(secret), self.secret)
 
     def get_secret(self, shares):
         """ recover the secret given at least k shares """
@@ -49,7 +59,34 @@ class ShamirSS(models.Model):
             raise ValueError('Not enough shares to recover the secret')
         return self._recover_secret(shares, prime)
 
-    # code from https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing#Python_example
+    def get_key(self, secret):
+        """ return a base64 encoded 32 bytes string of the secret """
+        str_secret = str(secret)
+        while len(str_secret) != 32:
+            if len(str_secret) < 32:
+                str_secret += '0'
+            elif len(str_secret) > 32:
+                str_secret = str_secret[:-1]
+        byte_secret = bytes(str_secret, 'utf-8')
+        return base64.b64encode(byte_secret)
+
+    def encrypt_file(self, file_path, shares):
+        """ encrypt a file using secret as key, return encrypted file path or None if file don't exists """
+        check_file = Path(file_path)
+        if check_file.is_file():
+            output_file = file_path + '.enc'
+            secret = self.get_secret(shares)
+            key = self.get_key(secret)
+            with open(file_path, 'rb') as f:
+                data = f.read()
+            fernet = Fernet(key)
+            encrypted = fernet.encrypt(data)
+            with open(output_file, 'wb') as f:
+                f.write(encrypted)
+            return output_file
+        return None
+
+    # https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing#Python_example
 
     def _eval_at(self, poly, x, prime):
         """evaluates polynomial (coefficient tuple) at x, used to generate a
