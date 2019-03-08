@@ -2,6 +2,7 @@ import random
 import functools
 import base64
 from django.db import models
+from django.conf import settings
 import django.contrib.auth.hashers as hashers
 from cryptography.fernet import Fernet
 from pathlib import Path
@@ -43,14 +44,18 @@ class ShamirSS(models.Model):
         del shares[-1]
         hashed_secret = hashers.make_password(secret)
         self.secret = hashed_secret
-        return shares
+        return self.encode_shares(shares)
 
     def validate_shares(self, shares):
         """ return true if shares match with secret """
         if not isinstance(shares, list):
             raise ValueError('unrecognized data')
-        secret = self.get_secret(shares)
-        return hashers.check_password(str(secret), self.secret)
+        try:
+            shares = self.decode_shares(shares)
+            secret = self.get_secret(shares)
+            return hashers.check_password(str(secret), self.secret)
+        except:
+            return False
 
     def get_secret(self, shares):
         """ recover the secret given at least k shares """
@@ -64,18 +69,37 @@ class ShamirSS(models.Model):
         str_secret = str(secret)
         while len(str_secret) != 32:
             if len(str_secret) < 32:
+                # insert 0 padding
                 str_secret += '0'
             elif len(str_secret) > 32:
+                # truncate if too long
                 str_secret = str_secret[:-1]
         byte_secret = bytes(str_secret, 'utf-8')
         return base64.b64encode(byte_secret)
+
+    def encode_shares(self, shares):
+        """ encode shares as base 64 bytes string """
+        ret_list = []
+        for share in shares:
+            b_share = bytes(str(share[1]), 'utf-8')
+            b_encoded = base64.b64encode(b_share)
+            ret_list.append((share[0], b_encoded.decode('utf-8')))
+        return ret_list
+
+    def decode_shares(self, shares):
+        """ decode shares as integers """
+        ret_list = []
+        for share in shares:
+            b_share = base64.b64decode(bytes(share[1], 'utf-8'))
+            ret_list.append((share[0], int(b_share.decode('utf-8'))))
+        return ret_list
 
     def encrypt_file(self, file_path, shares):
         """ encrypt a file using secret as key, return encrypted file path or None if file don't exists """
         check_file = Path(file_path)
         if check_file.is_file():
             output_file = file_path + '.enc'
-            secret = self.get_secret(shares)
+            secret = self.get_secret(self.decode_shares(shares))
             key = self.get_key(secret)
             with open(file_path, 'rb') as f:
                 data = f.read()
@@ -83,7 +107,27 @@ class ShamirSS(models.Model):
             encrypted = fernet.encrypt(data)
             with open(output_file, 'wb') as f:
                 f.write(encrypted)
-            return output_file
+            # return relative path to MEDIA path
+            remove_len = len(settings.MEDIA_ROOT)
+            return output_file[remove_len:]
+        return None
+
+    def decrypt_file(self, file_path, shares):
+        """ decrypt a file using secret as key, return decrypted file path or None if file don't exists """
+        check_file = Path(file_path)
+        if check_file.is_file():
+            output_file = file_path[:-4]
+            secret = self.get_secret(self.decode_shares(shares))
+            key = self.get_key(secret)
+            with open(file_path, 'rb') as f:
+                data = f.read()
+            fernet = Fernet(key)
+            encrypted = fernet.decrypt(data)
+            with open(output_file, 'wb') as f:
+                f.write(encrypted)
+            # return relative path to MEDIA path
+            remove_len = len(settings.MEDIA_ROOT)
+            return output_file[remove_len:]
         return None
 
     # https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing#Python_example

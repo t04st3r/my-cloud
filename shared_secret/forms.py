@@ -1,21 +1,20 @@
 from django import forms
 from shared_secret.models import ShamirSS
-from django.core.files import File
 import os
 
 
-class EncryptForm(forms.Form):
+class EncryptDecryptForm(forms.Form):
     """ dynamic number of shares fields based n_shares """
-
-    scheme = forms.ModelChoiceField(queryset=ShamirSS.objects.all(), empty_label=None)
-
-    def __init__(self, n_shares=None, *args, **kwargs):
-        super(EncryptForm, self).__init__(*args, **kwargs)
+    def __init__(self, n_shares=None, enc=True, *args, **kwargs):
+        super(EncryptDecryptForm, self).__init__(*args, **kwargs)
         if n_shares is not None:
+            self.fields['scheme'] = forms.ModelChoiceField(queryset=ShamirSS.objects.all(), empty_label=None)
+            if not enc:
+                self.fields['scheme'].widget = forms.HiddenInput()
             for i in range(0, n_shares):
                 field_name = "share_{}".format(i + 1)
-                self.fields[field_name] = forms.IntegerField(required=False)
-                self.fields[field_name].widget = forms.TextInput()
+                self.fields[field_name] = forms.CharField(required=False)
+                self.fields[field_name].widget = forms.PasswordInput()
 
     def get_shares(self):
         """ return submitted shares and scheme """
@@ -24,7 +23,7 @@ class EncryptForm(forms.Form):
         scheme = cleaned_data.get('scheme')
         for i in range(0, scheme.n):
             share = cleaned_data.get("share_{}".format(i + 1))
-            if share is not None:
+            if len(share) > 0:
                 shares.append((i + 1, share))
         return scheme, shares
 
@@ -36,14 +35,27 @@ class EncryptForm(forms.Form):
         if not scheme.validate_shares(shares):
             raise forms.ValidationError("Wrong shares values")
 
-    def save(self, document):
+    def encrypt(self, document):
         """ encrypt the document file and update its model, return True if everything goes smooth """
         scheme, shares = self.get_shares()
         enc_file_path = scheme.encrypt_file(document.file_path(), shares)
         if enc_file_path is None:
             return False
         os.remove(document.file_path())
-        document.file = File(open(enc_file_path, 'r'))
+        document.file.name = enc_file_path
+        document.scheme = scheme
+        document.save()
+        return True
+
+    def decrypt(self, document):
+        """ decrypt the document file and update its model, return True if everything goes smooth """
+        scheme, shares = self.get_shares()
+        dec_file_path = scheme.decrypt_file(document.file_path(), shares)
+        if dec_file_path is None:
+            return False
+        os.remove(document.file_path())
+        document.file.name = dec_file_path
+        document.scheme = None
         document.save()
         return True
 

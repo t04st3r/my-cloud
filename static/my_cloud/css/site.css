@@ -15,7 +15,11 @@ table {
 }
 
 th.fixed-header {
-    width: 20%;
+    width: 33%;
+}
+
+th.short-width {
+    width: 10%
 }
 
 .share-field {

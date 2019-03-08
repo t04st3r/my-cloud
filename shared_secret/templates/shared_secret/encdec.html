@@ -3,18 +3,30 @@
 {% block content %}
 
 <div class="alert alert-info" role="alert">
-    <p>Insert at least {{ scheme.k }} shares to encrypt your file, be careful to place each share in its right position</p>
+    {% if enc %}
+        <p>Insert at least {{ scheme.k }} shares to encrypt your file, be careful to place each share in its right position</p>
+    {% else %}
+        <p>Insert at least {{ scheme.k }} shares to decrypt your file, be careful to place each share in its right position</p>
+    {% endif %}
 </div>
 
 <div class="card">
     <div class="card-header">
-        Encrypt file {{document.name}} ({{document.filename}})
+        {% if enc %}
+            Encrypt file {{document.name}} ({{document.filename}})
+        {% else %}
+            Decrypt file {{document.name}} ({{document.filename}})
+        {% endif %}
     </div>
     <div class="card-body">
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
-            <button class="btn btn-primary" type="submit"><i class="fas fa-user-secret"></i> Encrypt</button>
+            {% if enc %}
+                <button class="btn btn-primary" type="submit"><i class="fas fa-lock"></i> Encrypt</button>
+            {% else %}
+                <button class="btn btn-primary" type="submit"><i class="fas fa-lock-open"></i> Decrypt</button>
+            {% endif %}
             <a class="btn btn-primary" href="/folder/{{ document.folder_id }}"><i class="fas fa-arrow-circle-left"></i> Back to {{ document.folder.name }}</a>
         </form>
     </div>

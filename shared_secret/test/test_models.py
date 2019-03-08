@@ -54,7 +54,7 @@ class ShamirSSTestCase(TestCase):
         # check hashed secret is correct picking n random shares
         secret_all = self.scheme.get_secret(shares)
         self.assertTrue(hashers.check_password(str(secret_all), encoded_secret))
-        # check value error if lower tha k shares provided
+        # check value error if lower than k shares provided
         rnd_shares_2 = self._pick_k_random_values(shares, self.scheme.k - 1)
         self.assertRaises(ValueError, lambda: self.scheme.get_secret(rnd_shares_2))
         # check for wrong shares
