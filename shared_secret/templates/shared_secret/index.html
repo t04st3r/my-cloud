@@ -15,11 +15,10 @@
         <th scope="col">Field Size</th>
         <th scope="col">Min. Shares (k)</th>
         <th scope="col">Total Shares (n)</th>
-        <th scope="col">Generate Shares</th>
+        <th scope="col" class="medium-width">Actions</th>
     </tr>
     </thead>
     <tbody>
-
 
 
     {% for scheme in schemes %}
@@ -29,7 +28,20 @@
         <td>2<sup>{{ scheme.mers_exp }}</sup> - 1</td>
         <td>{{ scheme.k }}</td>
         <td>{{ scheme.n }}</td>
-        <td><a href="/s/refresh/{{ scheme.id }}" class="btn btn-warning float-right"><i class="fas fa-key"></i> Regenerate</a></td>
+        <td>
+            <form method="post" action="/s/refresh/{{ scheme.id }}/">
+                {% csrf_token %}
+                {{ r_form.as_p }}
+                <button type="submit" class="btn btn-warning float-right enc_dec"><i class="fas fa-key"></i> Regenerate
+                </button>
+            </form>
+             <form method="post" action="/s/delete/{{ scheme.id }}/">
+                {% csrf_token %}
+                {{ d_form.as_p }}
+                <button type="submit" class="btn btn-danger float-right"><i class="far fa-trash-alt"></i> Delete
+                </button>
+            </form>
+        </td>
     </tr>
 
     {% endfor %}

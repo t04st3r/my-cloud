@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+{% block title %}<h4>Hold on!</h4>{% endblock %}
+
+<p>These files are encrypted using <strong>{{ scheme.name }}</strong>, if you refresh or delete the scheme you
+    won't be able to recover them</p>
+
+
+<table class="table">
+    <thead class="thead-dark">
+    <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Folder</th>
+        <th scope="col">Created at</th>
+    </tr>
+    </thead>
+    <tbody>
+
+    {% for document in documents %}
+
+    <tr>
+        <td><a href="/download/{{ document.id }}/"><i class="fas fa-file-archive"></i> {{ document.name }} {{ document.filename }}</a></td>
+        <td><a href="/folder/{{ document.folder.id }}/"><i class="far fa-folder"></i> {{ document.folder.name }}</a>
+        </td>
+        <td>{{ document.creation_date | date:'Y-m-d H:i' }}</td>
+    </tr>
+
+    {% endfor %}
+
+    </tbody>
+</table>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-danger float-right enc_dec"><i class="far fa-trash-alt"></i> Delete them all</button>
+</form>
+    <a href="/s/" class="btn btn-primary float-right"><i class="fas fa-arrow-circle-left"></i> Back to scheme list</a>
+
+
+{% endblock %}

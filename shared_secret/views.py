@@ -1,16 +1,21 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.http.response import HttpResponseNotAllowed
 from .models import ShamirSS
 from file_handler.models import Document
-from .forms import SSForm, EncryptDecryptForm, DivErrorList
+from .forms import SSForm, EncryptDecryptForm, DeleteRelatedForm, DeleteSchemeForm, DivErrorList, RefreshForm
 
 
 @login_required
 def index(request):
-    """ list all scheme available """
+    """ list all schemes available """
     schemes = ShamirSS.objects.all()
+    delete_form = DeleteSchemeForm()
+    refresh_form = RefreshForm()
     return render(request, 'shared_secret/index.html', {
-        'schemes': schemes
+        'schemes': schemes,
+        'd_form': delete_form,
+        'r_form': refresh_form
     })
 
 
@@ -34,9 +39,51 @@ def create(request):
     })
 
 
+@login_required
+def delete_related(request, scheme_id):
+    """ delete all related documents to a given scheme """
+    scheme = get_object_or_404(ShamirSS, pk=scheme_id)
+    documents = scheme.document_set.all()
+    form = DeleteRelatedForm()
+    if request.method == 'POST':
+        documents.delete()
+        return redirect('/s')
+    else:
+        return render(request, 'shared_secret/del_related.html', {
+            'scheme': scheme,
+            'documents': documents,
+            'form' : form
+        })
+
+
+@login_required
+def delete(request, scheme_id):
+    """ delete a scheme """
+    if request.method == 'POST':
+        scheme = get_object_or_404(ShamirSS, pk=scheme_id)
+        documents = scheme.document_set.all()
+        if len(documents) > 0:
+            return redirect('/s/delete_related/{}'.format(scheme.id))
+        scheme.delete()
+        return redirect('/s')
+    return HttpResponseNotAllowed([request.method])
+
+
+@login_required
 def refresh(request, scheme_id):
-    # TBD
-    pass
+    """ regenerate shares for a given scheme """
+    if request.method == 'POST':
+        scheme = get_object_or_404(ShamirSS, pk=scheme_id)
+        documents = scheme.document_set.all()
+        if len(documents) > 0:
+            return redirect('/s/delete_related/{}'.format(scheme.id))
+        shares = scheme.get_shares()
+        scheme.save()
+        return render(request, 'shared_secret/generate.html', {
+            'shares': shares,
+            'scheme': scheme
+        })
+    return HttpResponseNotAllowed([request.method])
 
 
 @login_required

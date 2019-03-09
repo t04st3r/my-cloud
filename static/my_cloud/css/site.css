@@ -22,6 +22,10 @@ th.short-width {
     width: 10%
 }
 
+th.medium-width {
+    width: 25%
+}
+
 .share-field {
     width: 500px;
 }

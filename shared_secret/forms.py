@@ -88,3 +88,17 @@ class DivErrorList(forms.utils.ErrorList):
         if not self:
             return ''
         return '<div class="errorlist alert alert-danger">%s</div>' % ''.join(['<div class="error">%s</div>' % e for e in self])
+
+
+class DeleteSchemeForm(forms.ModelForm):
+    class Meta:
+        model = ShamirSS
+        fields = []
+
+
+class DeleteRelatedForm(forms.Form):
+    pass
+
+
+class RefreshForm(forms.Form):
+    pass
