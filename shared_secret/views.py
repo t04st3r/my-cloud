@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404, get_list_or_404
 from django.contrib.auth.decorators import login_required
 from django.http.response import HttpResponseNotAllowed
 from .models import ShamirSS
@@ -43,16 +43,16 @@ def create(request):
 def delete_related(request, scheme_id):
     """ delete all related documents to a given scheme """
     scheme = get_object_or_404(ShamirSS, pk=scheme_id)
-    documents = scheme.document_set.all()
+    documents = get_list_or_404(Document, scheme=scheme)
     form = DeleteRelatedForm()
     if request.method == 'POST':
-        documents.delete()
+        Document.objects.filter(scheme=scheme).delete()
         return redirect('/s')
     else:
         return render(request, 'shared_secret/del_related.html', {
             'scheme': scheme,
             'documents': documents,
-            'form' : form
+            'form': form
         })
 
 
@@ -72,8 +72,8 @@ def delete(request, scheme_id):
 @login_required
 def refresh(request, scheme_id):
     """ regenerate shares for a given scheme """
+    scheme = get_object_or_404(ShamirSS, pk=scheme_id)
     if request.method == 'POST':
-        scheme = get_object_or_404(ShamirSS, pk=scheme_id)
         documents = scheme.document_set.all()
         if len(documents) > 0:
             return redirect('/s/delete_related/{}'.format(scheme.id))

@@ -4,9 +4,9 @@
 
 <div class="alert alert-info" role="alert">
     {% if enc %}
-        <p>Insert at least {{ scheme.k }} shares to encrypt your file, be careful to place each share in its right position</p>
+        <p>Insert at least {{ scheme.k }} shares to encrypt your file, be careful to place each share on its right position</p>
     {% else %}
-        <p>Insert at least {{ scheme.k }} shares to decrypt your file, be careful to place each share in its right position</p>
+        <p>Insert at least {{ scheme.k }} shares to decrypt your file, be careful to place each share on its right position</p>
     {% endif %}
 </div>
 
@@ -42,7 +42,6 @@
         splitted_path.push(id)
         var pathname = splitted_path.join('/')
         location.pathname = pathname
-
     })
 
 </script>

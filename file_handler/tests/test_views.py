@@ -130,8 +130,6 @@ class TestFileHandlerViews(TestCase):
         self.assertFalse(os.path.isfile(parent_doc.file_path()))
         self.assertRaises(ObjectDoesNotExist, lambda: Document.objects.get(pk=parent_doc.id))
 
-
-
     @classmethod
     def tearDownClass(cls):
         # remove test files

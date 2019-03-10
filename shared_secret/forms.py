@@ -37,6 +37,8 @@ class EncryptDecryptForm(forms.Form):
 
     def encrypt(self, document):
         """ encrypt the document file and update its model, return True if everything goes smooth """
+        if document.scheme is not None:
+            return False
         scheme, shares = self.get_shares()
         enc_file_path = scheme.encrypt_file(document.file_path(), shares)
         if enc_file_path is None:
@@ -49,6 +51,8 @@ class EncryptDecryptForm(forms.Form):
 
     def decrypt(self, document):
         """ decrypt the document file and update its model, return True if everything goes smooth """
+        if document.scheme is None:
+            return False
         scheme, shares = self.get_shares()
         dec_file_path = scheme.decrypt_file(document.file_path(), shares)
         if dec_file_path is None:

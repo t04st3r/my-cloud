@@ -3,8 +3,6 @@ from shared_secret.models import ShamirSS
 from shared_secret.forms import SSForm
 import django.contrib.auth.hashers as hashers
 from django.conf import settings
-from file_handler.models import Document, Folder
-from django.core.files import File
 import os
 import hashlib
 import random
@@ -25,16 +23,16 @@ class ShamirSSTestCase(TestCase):
         """ Test for correct fields validation with SSForm """
         valid_form = SSForm(data=self.form_data)
         self.assertTrue(valid_form.is_valid())
-        """ Test illegal value for mers_exp """
+        # Test illegal value for mers_exp
         self.form_data['mers_exp'] = 3
         invalid_form = SSForm(data=self.form_data)
         self.assertFalse(invalid_form.is_valid())
-        """ Test illegal value for k """
+        # Test illegal value for k
         self.form_data['mers_exp'] = 107
         self.form_data['k'] = self.scheme.MAX_N + 1
         invalid_form = SSForm(data=self.form_data)
         self.assertFalse(invalid_form.is_valid())
-        """ Test illegal value for n """
+        # Test illegal value for n
         self.form_data['k'] = 4
         self.form_data['n'] = self.scheme.MAX_N + 1
         invalid_form = SSForm(data=self.form_data)
@@ -96,11 +94,28 @@ class ShamirSSTestCase(TestCase):
         hash_2 = self.hash_file(settings.MEDIA_ROOT + enc_dec_test_file_2)
         # compare hashes
         self.assertTrue(hash_1 == hash_2)
-        # remove test files
-        os.remove(settings.MEDIA_ROOT + enc_dec_test_file_1)
-        os.remove(settings.MEDIA_ROOT + enc_dec_test_file_2)
+        # remove encrypted files
         os.remove(settings.MEDIA_ROOT + enc_dec_test_file_1 + '.enc')
         os.remove(settings.MEDIA_ROOT + enc_dec_test_file_2 + '.enc')
+        # test encryption with files having different content
+        with open(file_name_2, 'a') as file:
+            file.write('this make file 2 different\n')
+        # encrypt/decrypt test file 1
+        enc_dec_test_file_1 = self.scheme.decrypt_file(
+            settings.MEDIA_ROOT + self.scheme.encrypt_file(file_name_1, shares), shares)
+        # encrypt/decrypt test file 2
+        enc_dec_test_file_2 = self.scheme.decrypt_file(
+            settings.MEDIA_ROOT + self.scheme.encrypt_file(file_name_2, shares), shares)
+        # create hashes of the two files
+        hash_1 = self.hash_file(settings.MEDIA_ROOT + enc_dec_test_file_1)
+        hash_2 = self.hash_file(settings.MEDIA_ROOT + enc_dec_test_file_2)
+        # compare hashes
+        self.assertTrue(hash_1 != hash_2)
+        # remove test files
+        os.remove(settings.MEDIA_ROOT + enc_dec_test_file_1 + '.enc')
+        os.remove(settings.MEDIA_ROOT + enc_dec_test_file_2 + '.enc')
+        os.remove(settings.MEDIA_ROOT + enc_dec_test_file_1)
+        os.remove(settings.MEDIA_ROOT + enc_dec_test_file_2)
 
     def hash_file(self, file):
         """ return sha1 hash of a file """
