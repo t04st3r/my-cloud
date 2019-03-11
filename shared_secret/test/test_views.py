@@ -14,22 +14,23 @@ class TestSharedSecretViews(TestCase):
     DUMMY_USERNAME = 'dummy'
     DUMMY_PASSWORD = 'dummy_secret'
     DUMMY_EMAIL = 'dummy@dummy.com'
+    TEST_FILE_NAME = 'test_file.txt'
 
     @classmethod
     def setUpClass(cls):
         # create a test user
         User.objects.create_user(cls.DUMMY_USERNAME, cls.DUMMY_EMAIL, cls.DUMMY_PASSWORD)
-        # create folder, document models and a test file
-        cls.folder = Folder.objects.create(name='test_folder')
-        with open('test_file.txt', 'w+') as file:
-            file.write('something to fill this up\n\n')
-            cls.document = Document.objects.create(name='test_doc', folder=cls.folder, file=File(file))
-        os.remove('test_file.txt')
 
     def setUp(self):
         self.client = Client()
         self.client.login(username=self.DUMMY_USERNAME, password=self.DUMMY_PASSWORD, enforce_csrf_checks=True)
         self.scheme_data = {'name': 'test', 'mers_exp': 107, 'k': 4, 'n': 18}
+        # create folder, document models and a test file
+        self.folder = Folder.objects.create(name='test_folder')
+        with open(self.TEST_FILE_NAME, 'w+') as file:
+            file.write('something to fill this up\n\n')
+            self.document = Document.objects.create(name='test_doc', folder=self.folder, file=File(file))
+        os.remove('test_file.txt')
 
     def test_index(self):
         """ Test for index view """
@@ -139,7 +140,33 @@ class TestSharedSecretViews(TestCase):
 
     def test_encrypt(self):
         """ Test encrypt view """
-
+        enc_url = '/s/encrypt/{}/{}/'
+        # check non existent document and scheme
+        response = self.client.get(enc_url.format(random.randint(2, 100), random.randint(1, 100)))
+        self.assertEqual(response.status_code, 404)
+        response = self.client.post(enc_url.format(random.randint(2, 100), random.randint(1, 100)))
+        self.assertEqual(response.status_code, 404)
+        scheme = ShamirSS(**self.scheme_data)
+        shares = scheme.get_shares()
+        scheme.save()
+        # check get on existing scheme and document
+        response = self.client.get(enc_url.format(self.document.id, scheme.id))
+        self.assertEqual(response.status_code, 200)
+        # check successful redirect after encryption
+        random_shares = self._pick_k_random_values(shares, scheme.k)
+        post_data = {'share_' + str(share[0]): share[1] for share in random_shares}
+        post_data['scheme'] = scheme.id
+        expected_url = '/folder/{}/'.format(self.document.folder.id)
+        response = self.client.post(enc_url.format(self.document.id, scheme.id), post_data, follow=True)
+        self.assertRedirects(response, expected_url=expected_url, status_code=302, target_status_code=200)
+        # check document model changes
+        self.document.refresh_from_db()
+        self.assertTrue(os.path.isfile(self.document.file_path()))
+        self.assertIsNotNone(self.document.scheme)
+        self.assertEqual(self.document.filename(), self.TEST_FILE_NAME + '.enc')
+        # check pass document already encrypted
+        response = self.client.post(enc_url.format(self.document.id, scheme.id), post_data, follow=True)
+        self.assertFormError(response, 'form', None, 'Document already encrypted')
 
 
     def check_shares(self, shares_1, shares_2):
@@ -149,7 +176,16 @@ class TestSharedSecretViews(TestCase):
                 return False
         return True
 
+    def _pick_k_random_values(self, l, k):
+        """ select k distinct random values from l """
+        s = set()
+        while len(s) != k:
+            s.add(random.choice(l))
+        return list(s)
+
     @classmethod
     def tearDownClass(cls):
-        cls.folder.delete()
+        pass
 
+    def tearDown(self):
+        os.remove(self.document.file_path())
