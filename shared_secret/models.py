@@ -95,7 +95,7 @@ class ShamirSS(models.Model):
         return ret_list
 
     def encrypt_file(self, file_path, shares):
-        """ encrypt a file using secret as key, return encrypted file path or None if file don't exists """
+        """ encrypt a file using secret as key, return encrypted file path or None if file doesn't exists """
         check_file = Path(file_path)
         if check_file.is_file():
             output_file = file_path + '.enc'
@@ -113,7 +113,7 @@ class ShamirSS(models.Model):
         return None
 
     def decrypt_file(self, file_path, shares):
-        """ decrypt a file using secret as key, return decrypted file path or None if file don't exists """
+        """ decrypt a file using secret as key, return decrypted file path or None if file doesn't exists """
         check_file = Path(file_path)
         if check_file.is_file():
             output_file = file_path[:-4]

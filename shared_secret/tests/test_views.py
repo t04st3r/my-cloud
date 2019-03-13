@@ -164,10 +164,46 @@ class TestSharedSecretViews(TestCase):
         self.assertTrue(os.path.isfile(self.document.file_path()))
         self.assertIsNotNone(self.document.scheme)
         self.assertEqual(self.document.filename(), self.TEST_FILE_NAME + '.enc')
-        # check pass document already encrypted
+        # check document already encrypted
         response = self.client.post(enc_url.format(self.document.id, scheme.id), post_data, follow=True)
         self.assertFormError(response, 'form', None, 'Document already encrypted')
-
+        
+    def test_decrypt(self):
+        dec_url = '/s/decrypt/{}/'
+        # check non existent document
+        response = self.client.get(dec_url.format(random.randint(2, 100)))
+        self.assertEqual(response.status_code, 404)
+        response = self.client.post(dec_url.format(random.randint(2, 100)))
+        self.assertEqual(response.status_code, 404)
+        # check get on plaintext document
+        response = self.client.get(dec_url.format(self.document.id))
+        self.assertEqual(response.status_code, 404)
+        # check post on plaintext document
+        response = self.client.post(dec_url.format(self.document.id))
+        self.assertEqual(response.status_code, 404)
+        # encrypt file
+        scheme = ShamirSS(**self.scheme_data)
+        shares = scheme.get_shares()
+        scheme.save()
+        enc_file_path = scheme.encrypt_file(self.document.file_path(), shares)
+        os.remove(self.document.file_path())
+        self.document.file.name = enc_file_path
+        self.document.scheme = scheme
+        self.document.save()
+        # check successful get
+        response = self.client.get(dec_url.format(self.document.id))
+        self.assertEqual(response.status_code, 200)
+        # check successful redirect after decryption
+        random_shares = self._pick_k_random_values(shares, scheme.k)
+        post_data = {'share_' + str(share[0]): share[1] for share in random_shares}
+        post_data['scheme'] = scheme.id
+        expected_url = '/folder/{}/'.format(self.document.folder.id)
+        response = self.client.post(dec_url.format(self.document.id), post_data, follow=True)
+        self.assertRedirects(response, expected_url=expected_url, status_code=302, target_status_code=200)
+        self.document.refresh_from_db()
+        self.assertTrue(os.path.isfile(self.document.file_path()))
+        self.assertIsNone(self.document.scheme)
+        self.assertEqual(self.document.filename(), self.TEST_FILE_NAME)
 
     def check_shares(self, shares_1, shares_2):
         """ helper function: return True if shares are different """
