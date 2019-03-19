@@ -73,7 +73,7 @@ class ShamirSS(models.Model):
                 str_secret += '0'
             elif len(str_secret) > 32:
                 # truncate if too long
-                str_secret = str_secret[:-1]
+                str_secret = str_secret[:32]
         byte_secret = bytes(str_secret, 'utf-8')
         return base64.b64encode(byte_secret)
 
