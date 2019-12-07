@@ -36,6 +36,9 @@ class ShamirSS(models.Model):
     def __str__(self):
         return "{} ({}, {})".format(self.name, self.k, self.n)
 
+    def difference(self):
+        return self.n - self.k
+
     def get_shares(self):
         """ generate n shares and store hashed secret """
         prime = (2**self.mers_exp) - 1

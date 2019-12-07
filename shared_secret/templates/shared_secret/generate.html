@@ -8,7 +8,7 @@
     <p><strong>Be careful!</strong></p>
     <ul>
         <li><p>These shares are not stored anywhere and you won't be able to recover your encrypted
-            files if you lose at least {{ scheme.k }} of it</p></li>
+            files if you lose {% if scheme.difference == 0 %}any{% else %}more than {{ scheme.difference }}{% endif %} of it</p></li>
         <li><p>make sure to save them in a safe place or distribute among your trusted partners</p></li>
     </ul>
 </div>

@@ -19,6 +19,10 @@ class ShamirSSTestCase(TestCase):
     def setUpClass(cls):
         super().setUpClass()
 
+    def test_difference(self):
+        """ Test difference method works """
+        self.assertTrue(self.scheme.difference() == 14)
+
     def test_scheme_fileds(self):
         """ Test for correct fields validation with SSForm """
         valid_form = SSForm(data=self.form_data)
@@ -47,7 +51,8 @@ class ShamirSSTestCase(TestCase):
         """ Test for successful shares generation and secret recovery """
         # check correct base64 encoding-decoding
         random_int = random.randint(10000000000, 100000000000)
-        enc_dec = self.scheme.decode_shares(self.scheme.encode_shares([(0, random_int)]))
+        enc_dec = self.scheme.decode_shares(
+            self.scheme.encode_shares([(0, random_int)]))
         self.assertTrue(random_int == enc_dec[0][1])
         # check all shares generated correctly
         shares = self.scheme.get_shares()
@@ -55,19 +60,25 @@ class ShamirSSTestCase(TestCase):
         self.assertTrue(len(shares) == self.scheme.n)
         # check hashed secret is correct picking k random shares
         rnd_shares = self._pick_k_random_values(shares, self.scheme.k)
-        rec_secret = self.scheme.get_secret(self.scheme.decode_shares(rnd_shares))
-        self.assertTrue(hashers.check_password(str(rec_secret), encoded_secret))
+        rec_secret = self.scheme.get_secret(
+            self.scheme.decode_shares(rnd_shares))
+        self.assertTrue(hashers.check_password(
+            str(rec_secret), encoded_secret))
         # check hashed secret is correct picking n random shares
         secret_all = self.scheme.get_secret(self.scheme.decode_shares(shares))
-        self.assertTrue(hashers.check_password(str(secret_all), encoded_secret))
+        self.assertTrue(hashers.check_password(
+            str(secret_all), encoded_secret))
         # check value error if lower than k shares provided
         rnd_shares_2 = self._pick_k_random_values(shares, self.scheme.k - 1)
-        self.assertRaises(ValueError, lambda: self.scheme.get_secret(self.scheme.decode_shares(rnd_shares_2)))
+        self.assertRaises(ValueError, lambda: self.scheme.get_secret(
+            self.scheme.decode_shares(rnd_shares_2)))
         # check for wrong shares
         rnd_shares_3 = self._pick_k_random_values(shares, self.scheme.k)
         rnd_shares_3[0] = (rnd_shares_3[0][0], rnd_shares_3[1][1])
-        wrong_secret = self.scheme.get_secret(self.scheme.decode_shares(rnd_shares_3))
-        self.assertFalse(hashers.check_password(str(wrong_secret), encoded_secret))
+        wrong_secret = self.scheme.get_secret(
+            self.scheme.decode_shares(rnd_shares_3))
+        self.assertFalse(hashers.check_password(
+            str(wrong_secret), encoded_secret))
 
     def test_file_encryption_decryption(self):
         """ Test successful file encryption and decryption """

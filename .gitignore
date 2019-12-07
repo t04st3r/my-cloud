@@ -4,3 +4,5 @@
 !/static/my_cloud/
 /__pycache__/
 /mycloudvenv/
+*.pyc
+*.pyo
