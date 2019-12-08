@@ -7,6 +7,6 @@ FROM python:3.6-alpine
 
  RUN mkdir /config
  ADD requirements.txt /config/
- RUN pip install -r /config/requirements.txt
+ RUN pip install --upgrade pip && pip install -r /config/requirements.txt
  RUN mkdir /src
  WORKDIR /src
