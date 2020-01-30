@@ -6,6 +6,10 @@ a {
     margin-left: 10px;
 }
 
+label {
+    font-size: 12px;
+}
+
 .nav > li > a {
     color: white;
 }
