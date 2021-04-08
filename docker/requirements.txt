@@ -1,4 +1,4 @@
-Django==2.2.18
+Django==2.2.20
 gunicorn==19.7.0
 psycopg2==2.7.4
 django-configurations==2.1
