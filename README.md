@@ -3,7 +3,7 @@
 My cloud is a webapp developed with [django framework](https://www.djangoproject.com/)
 using [PostgreSQL](https://www.postgresql.org/) and running on [nginx](https://nginx.org/)
 web server. My cloud allows you to handle files in a filesystem and encrypt/decrypt them using 
-[Shamir's Secret Sharing](https://cs.jhu.edu/~sdoshi/crypto/papers/shamirturing.pdf) scheme.
+[Shamir's Secret Sharing](https://web.mit.edu/6.857/OldStuff/Fall03/ref/Shamir-HowToShareASecret.pdf) scheme.
 
 **Warning**
 
