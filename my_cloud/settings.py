@@ -50,7 +50,14 @@ INSTALLED_APPS = [
     "oauth2_provider",
     "api",
     "mptt",
+    "django.contrib.sites",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
 ]
+
+SITE_ID = 1
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -60,6 +67,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
 ]
 
 ROOT_URLCONF = "my_cloud.urls"
@@ -149,4 +157,40 @@ OAUTH2_PROVIDER = {
     "SCOPES": {"read": "Read scope", "write": "Write scope"},
 }
 
-AUTHENTICATION_BACKENDS = ["my_cloud.authentication.CustomAuthentication"]
+AUTHENTICATION_BACKENDS = [
+    # username/email + password (used by the Django admin for staff/superusers)
+    "my_cloud.authentication.CustomAuthentication",
+    # social login (Google) via allauth
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+# ---- allauth (Google sign-in as the only registration path) ------------------
+# Local (password) self-registration is closed; new users are created only by
+# signing in with Google. Staff/superusers still log in with a password via /admin/.
+ACCOUNT_ADAPTER = "my_cloud.adapters.NoNewUsersAccountAdapter"
+SOCIALACCOUNT_ADAPTER = "my_cloud.adapters.GoogleSignupAdapter"
+SOCIALACCOUNT_LOGIN_ON_GET = True
+ACCOUNT_EMAIL_VERIFICATION = "none"
+SOCIALACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_LOGOUT_REDIRECT_URL = "/"
+
+# Google verifies email ownership, so a Google login whose verified email matches
+# an existing account logs into that account and links to it (seamless sign-in for
+# accounts pre-created via the admin, e.g. the superuser). Safe ONLY because every
+# provider here is fully trusted — do not enable this if adding an untrusted provider.
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "APP": {
+            "client_id": env("GOOGLE_OAUTH_CLIENT_ID", default=""),
+            "secret": env("GOOGLE_OAUTH_CLIENT_SECRET", default=""),
+            "key": "",
+        },
+        "SCOPE": ["profile", "email"],
+        # prompt=select_account -> always show the Google account chooser
+        # instead of silently reusing the last account.
+        "AUTH_PARAMS": {"access_type": "online", "prompt": "select_account"},
+    }
+}
