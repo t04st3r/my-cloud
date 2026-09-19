@@ -1,5 +1,75 @@
+/* ---- Theme tokens ------------------------------------------------------- */
+:root {
+    --accent: #6366f1;          /* indigo-500 */
+    --accent-hover: #4f46e5;    /* indigo-600 */
+    --accent-contrast: #ffffff;
+    --accent-focus: rgba(99, 102, 241, 0.25);
+
+    --page-bg: #eef1f6;
+    --surface: #ffffff;
+    --surface-2: #f7f9fc;       /* card headers, hover rows */
+    --table-header: #2b2f36;    /* dark table head */
+    --text: #2b2f36;
+    --muted: #6b7280;
+    --border: #e5e8ef;
+    --input-bg: #ffffff;
+}
+
+/* Dark palette: applied via [data-theme="dark"] (set by JS), with a no-JS
+   fallback to the OS preference. */
+:root[data-theme="dark"] {
+    --accent: #818cf8;          /* indigo-400 */
+    --accent-hover: #6366f1;
+    --accent-contrast: #0f1115;
+    --accent-focus: rgba(129, 140, 248, 0.3);
+
+    --page-bg: #0f1115;
+    --surface: #1b1f27;
+    --surface-2: #232833;
+    --table-header: #12151b;
+    --text: #e6e8ec;
+    --muted: #9aa2af;
+    --border: #2a2f3a;
+    --input-bg: #12151b;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --accent: #818cf8;
+        --accent-hover: #6366f1;
+        --accent-contrast: #0f1115;
+        --accent-focus: rgba(129, 140, 248, 0.3);
+
+        --page-bg: #0f1115;
+        --surface: #1b1f27;
+        --surface-2: #232833;
+        --table-header: #12151b;
+        --text: #e6e8ec;
+        --muted: #9aa2af;
+        --border: #2a2f3a;
+        --input-bg: #12151b;
+    }
+}
+
+/* ---- Base --------------------------------------------------------------- */
+body {
+    background-color: var(--page-bg);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text);
+}
+
+.content_wrapper {
+    padding-top: 1.75rem;
+    padding-bottom: 3rem;
+}
+
 a {
     text-decoration: none !important;
+    color: var(--accent);
+}
+
+a:hover {
+    color: var(--accent-hover);
 }
 
 .enc_dec {
@@ -10,8 +80,136 @@ label {
     font-size: 12px;
 }
 
+.text-muted {
+    color: var(--muted) !important;
+}
+
+/* ---- Accent (replaces Bootstrap primary) -------------------------------- */
+.bg-primary {
+    background-color: var(--accent) !important;
+}
+
+.text-primary {
+    color: var(--accent) !important;
+}
+
+.btn-primary,
+.btn-primary:focus {
+    background-color: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-contrast);
+    box-shadow: none;
+}
+
+.btn-primary:hover,
+.btn-primary:active,
+.btn-primary:not(:disabled):not(.disabled):active {
+    background-color: var(--accent-hover);
+    border-color: var(--accent-hover);
+    color: var(--accent-contrast);
+}
+
+/* ---- Navbar ------------------------------------------------------------- */
+.navbar {
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+}
+
+.navbar-brand {
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+.navbar .nav-link,
 .nav > li > a {
-    color: white;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 500;
+    transition: color 0.15s ease-in-out;
+}
+
+.navbar .nav-link:hover {
+    color: #fff;
+}
+
+/* "Log out" is a POST form button styled to match the nav links. */
+.logout-btn {
+    background: none;
+    border: 0;
+    cursor: pointer;
+    font: inherit;
+    text-decoration: none !important;
+}
+
+/* ---- Cards & tables ----------------------------------------------------- */
+.card {
+    border: none;
+    border-radius: 0.6rem;
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12), 0 1px 2px rgba(16, 24, 40, 0.08);
+}
+
+.card-header {
+    background-color: var(--surface-2);
+    border-bottom-color: var(--border);
+    color: var(--text);
+}
+
+.table {
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 0.6rem;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12), 0 1px 2px rgba(16, 24, 40, 0.08);
+    overflow: hidden;
+}
+
+.table td,
+.table th {
+    vertical-align: middle;
+    border-top: 1px solid var(--border);
+}
+
+.table thead.thead-dark th {
+    background-color: var(--table-header);
+    border-color: var(--table-header);
+}
+
+.table thead th:first-child {
+    border-top-left-radius: 0.6rem;
+}
+
+.table thead th:last-child {
+    border-top-right-radius: 0.6rem;
+}
+
+.table tbody tr:hover {
+    background-color: var(--surface-2);
+}
+
+/* ---- Forms -------------------------------------------------------------- */
+.form-control,
+.custom-select,
+select.form-control {
+    background-color: var(--input-bg);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+.form-control:focus,
+select.form-control:focus {
+    background-color: var(--input-bg);
+    color: var(--text);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 0.2rem var(--accent-focus);
+}
+
+.form-control::placeholder {
+    color: var(--muted);
+}
+
+/* Buttons: softer corners */
+.btn {
+    border-radius: 0.4rem;
 }
 
 table {
@@ -32,4 +230,189 @@ th.medium-width {
 
 .share-field {
     width: 500px;
+}
+
+/* Mask share values without using a type=password input, so the browser
+   password manager does not offer to save them as credentials. */
+.masked-share {
+    -webkit-text-security: disc;
+    text-security: disc;
+}
+
+/* Lightweight confirmation modal (no Bootstrap JS dependency). */
+.scheme-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1050;
+}
+
+.scheme-modal-dialog {
+    width: 100%;
+    max-width: 800px;
+    margin: 1rem;
+}
+
+/* Action buttons on a single right-aligned row (wraps only on very narrow screens). */
+.scheme-modal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+/* Keep each action button on one line and compact enough to share a row. */
+.scheme-modal-actions .btn {
+    white-space: nowrap;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.9rem;
+}
+
+/* Affected-files table inside the modal, scrollable when long. */
+#scheme-modal-files {
+    max-height: 220px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+}
+
+.scheme-files-table {
+    margin-bottom: 0;
+}
+
+/* ---- Upload dropzone ---------------------------------------------------- */
+.dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 0.6rem;
+    background: var(--surface-2);
+    padding: 2rem 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease-in-out, background 0.15s ease-in-out;
+}
+
+.dropzone:hover,
+.dropzone.dragover {
+    border-color: var(--accent);
+    background: var(--surface);
+}
+
+.dropzone-icon {
+    font-size: 2.5rem;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+}
+
+.preview-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.preview-item {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--surface);
+}
+
+.preview-thumb {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 0.375rem;
+    border: 1px solid var(--border);
+    flex: 0 0 auto;
+}
+
+.preview-file-icon {
+    font-size: 2rem;
+    color: var(--accent);
+    width: 48px;
+    text-align: center;
+    flex: 0 0 auto;
+}
+
+.preview-meta {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.preview-name {
+    font-weight: 600;
+    word-break: break-all;
+}
+
+.preview-remove {
+    flex: 0 0 auto;
+}
+
+/* ---- Help page figures -------------------------------------------------- */
+.help-figure {
+    text-align: center;
+    margin: 1.5rem 0;
+}
+
+.help-figure svg {
+    max-width: 100%;
+    height: auto;
+}
+
+.help-figure figcaption {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+.help-axis {
+    stroke: var(--muted);
+    stroke-width: 1.5;
+}
+
+.help-tick {
+    fill: var(--muted);
+    font-size: 11px;
+}
+
+.help-curve {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2.5;
+}
+
+.help-curve-b {
+    fill: none;
+    stroke: #22a06b;
+    stroke-width: 2.5;
+    stroke-dasharray: 6 4;
+}
+
+.help-curve-c {
+    fill: none;
+    stroke: #d9822b;
+    stroke-width: 2.5;
+    stroke-dasharray: 2 4;
+}
+
+.help-share {
+    fill: var(--accent);
+}
+
+.help-point {
+    fill: var(--text);
+}
+
+.help-label {
+    fill: var(--text);
+    font-size: 12px;
 }

@@ -1,5 +1,12 @@
 {% extends 'base.html' %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body);"></script>
+{% endblock %}
+
 {% block content %}
 
 <div class="card">
@@ -7,9 +14,32 @@
         Create new scheme
     </div>
     <div class="card-body">
+        <div class="alert alert-info" role="alert">
+            <p class="mb-1"><strong>How a shared secret works</strong></p>
+            <p class="mb-1">
+                Shamir's Secret Sharing splits the encryption key into \(n\) shares and hands one to
+                each trusted party. The file can only be decrypted when at least \(k\) of those shares
+                are brought back together — any fewer reveal nothing at all, not even with unlimited
+                computing power.
+            </p>
+            <p class="mb-0">
+                This enforces <strong>separation of duties</strong>: no single person can unlock the
+                file alone, a quorum of \(k\) keyholders must cooperate. For example
+                \(k = 2,\ n = 3\) means any 2 of 3 people can decrypt, and you can still recover
+                if one share is lost.
+            </p>
+        </div>
         <form method="post">
             {% csrf_token %}
-            {{ form.as_p }}
+            {{ form.non_field_errors }}
+            {% for field in form %}
+            <div class="form-group">
+                {{ field.label_tag }}
+                {{ field }}
+                {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
+                {{ field.errors }}
+            </div>
+            {% endfor %}
             <button class="btn btn-primary" type="submit"><i class="fas fa-cogs"></i> Create</button>
             <a class="btn btn-primary" href="/s"><i class="far fa-list-alt"></i> Back to schemes</a>
             <a class="btn btn-primary" href="/"><i class="fas fa-list-ul"></i> Back to files</a>

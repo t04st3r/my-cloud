@@ -74,7 +74,7 @@ class ShamirSS(models.Model):
             if len(str_secret) < 32:
                 # insert 0 padding
                 str_secret += '0'
-            elif len(str_secret) > 32:
+            else:
                 # truncate if too long
                 str_secret = str_secret[:32]
         byte_secret = bytes(str_secret, 'utf-8')

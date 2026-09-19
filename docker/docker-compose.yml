@@ -1,30 +1,52 @@
-version: '3'
 services:
- db:
-  image: postgres:10.3-alpine
-  container_name: postgres01
- nginx:
-  image: nginx:1.13-alpine
-  container_name: nginx01
-  ports:
-   - "8000:8000"
-  volumes:
-   - ../:/src
-   - ./nginx:/etc/nginx/conf.d
-  depends_on:
-   - web
- web:
-  environment:
-   - DJANGO_CONFIGURATION=Dev
-   - DJANGO_SETTINGS_MODULE=my_cloud.settings
-  build: .
-  container_name: django01
-  privileged: true
-  command: bash -c "python manage.py makemigrations && python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --reload my_cloud.wsgi -b 0.0.0.0:8000"
-  depends_on:
-   - db
-  volumes:
-   - ../:/src
-  expose:
-   - "8000"
-  restart: always
+  db:
+    image: postgres:17-alpine
+    container_name: postgres01
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: django01
+    environment:
+      DEBUG: "False"
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-web,localhost}
+      DATABASE_URL: postgres://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/postgres
+    command: >
+      bash -c "python manage.py migrate &&
+               python manage.py collectstatic --noinput &&
+               gunicorn my_cloud.wsgi -b 0.0.0.0:8000 --reload"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ../:/src
+    expose:
+      - "8000"
+    restart: always
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nginx01
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../:/src
+      - ./nginx:/etc/nginx/conf.d
+    depends_on:
+      - web
+
+volumes:
+  db-data:

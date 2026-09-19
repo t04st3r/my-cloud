@@ -1,227 +1,246 @@
-from django.test import TestCase, Client
-from django.contrib.auth.models import User
-from shared_secret.models import ShamirSS
-from file_handler.models import Document, Folder
-from django.core.files import File
-from django.core.exceptions import ObjectDoesNotExist
-import random
 import os
 
+import pytest
 
-class TestSharedSecretViews(TestCase):
-    """ Test for shared_secret app views """
+from file_handler.models import Document
+from shared_secret.models import ShamirSS
+from tests.factories import DocumentFactory, ShamirSSFactory
 
-    DUMMY_USERNAME = 'dummy'
-    DUMMY_PASSWORD = 'dummy_secret'
-    DUMMY_EMAIL = 'dummy@dummy.com'
-    TEST_FILE_NAME = 'test_file.txt'
+pytestmark = pytest.mark.django_db
 
-    @classmethod
-    def setUpClass(cls):
-        # create a test user
-        User.objects.create_user(cls.DUMMY_USERNAME, cls.DUMMY_EMAIL, cls.DUMMY_PASSWORD)
+SCHEME_DATA = {'name': 'test', 'mers_exp': 107, 'k': 4, 'n': 18}
 
-    def setUp(self):
-        self.client = Client()
-        self.client.login(username=self.DUMMY_USERNAME, password=self.DUMMY_PASSWORD, enforce_csrf_checks=True)
-        self.scheme_data = {'name': 'test', 'mers_exp': 107, 'k': 4, 'n': 18}
-        # create folder, document models and a test file
-        self.folder = Folder.objects.create(name='test_folder')
-        with open(self.TEST_FILE_NAME, 'w+') as file:
-            file.write('something to fill this up\n\n')
-            self.document = Document.objects.create(name='test_doc', folder=self.folder, file=File(file))
-        os.remove('test_file.txt')
 
-    def test_index(self):
-        """ Test for index view """
-        response = self.client.get('/s/')
-        self.assertEqual(response.status_code, 200)
-        # check for empty list if no scheme is created
-        self.assertEqual(len(response.context['schemes']), 0)
-        scheme = ShamirSS(**self.scheme_data)
-        scheme.save()
-        response = self.client.get('/s/')
-        # check for created scheme
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.context['schemes']), 1)
-        # check for correct scheme fields
-        self.assertEqual(response.context['schemes'][0].name, scheme.name)
-        self.assertEqual(response.context['schemes'][0].mers_exp, scheme.mers_exp)
-        self.assertEqual(response.context['schemes'][0].k, scheme.k)
-        self.assertEqual(response.context['schemes'][0].n, scheme.n)
+def _share_post(scheme, shares, **extra):
+    """Build POST data with the first k shares plus the scheme id."""
+    data = {'share_%d' % pos: value for pos, value in shares[:scheme.k]}
+    data['scheme'] = scheme.id
+    data.update(extra)
+    return data
 
-    def test_create(self):
-        """ Test for create view """
-        create_url = '/s/create/'
-        response = self.client.get(create_url)
-        self.assertEqual(response.status_code, 200)
-        # check for correct creation
-        response = self.client.post(create_url, self.scheme_data)
-        self.assertEqual(response.status_code, 200)
-        # check for correct number of shares generation upon creation
-        # (correctness of shares already tested on test_models.py)
-        self.assertEqual(len(response.context['shares']), self.scheme_data['n'])
 
-    def test_delete_related(self):
-        """ Test for delete_related view """
-        del_url = '/s/delete_related/{}/'
-        response = self.client.get(del_url.format(random.randint(1, 100)))
-        # check for non existent scheme
-        self.assertEqual(response.status_code, 404)
-        scheme = ShamirSS(**self.scheme_data)
-        scheme.save()
-        # check for scheme without related documents
-        response = self.client.get(del_url.format(scheme.id))
-        self.assertEqual(response.status_code, 404)
-        # link a document
-        self.document.scheme = scheme
-        self.document.save()
-        # check for scheme with related documents
-        response = self.client.get(del_url.format(scheme.id))
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.context['documents']), 1)
+# ---- index / create -----------------------------------------------------------
 
-    def test_delete_scheme(self):
-        """ Test for delete view """
-        del_url = '/s/delete/{}/'
-        response = self.client.post(del_url.format(random.randint(1, 100)))
-        # check for delete non existent scheme
-        self.assertEqual(response.status_code, 404)
-        scheme = ShamirSS(**self.scheme_data)
-        scheme.save()
-        # check for wrong http method
-        response = self.client.get(del_url.format(scheme.id))
-        self.assertEqual(response.status_code, 405)
-        # link a document
-        self.document.scheme = scheme
-        self.document.save()
-        # check correct redirection to delete_related
-        expected_url = '/s/delete_related/{}/'.format(scheme.id)
-        response = self.client.post(del_url.format(scheme.id), follow=True)
-        self.assertRedirects(response, expected_url=expected_url, status_code=302, target_status_code=200)
-        # unlink document
-        self.document.scheme = None
-        self.document.save()
-        # check correct redirection after successful delete
-        response = self.client.post(del_url.format(scheme.id), follow=True)
-        self.assertRedirects(response, expected_url='/s/', status_code=302, target_status_code=200)
-        self.assertRaises(ObjectDoesNotExist, lambda: ShamirSS.objects.get(pk=scheme.id))
+def test_index_empty_then_one(auth_client):
+    resp = auth_client.get('/s/')
+    assert resp.status_code == 200
+    assert len(resp.context['schemes']) == 0
+    ShamirSSFactory(name='pizza')
+    resp = auth_client.get('/s/')
+    assert len(resp.context['schemes']) == 1
+    assert resp.context['schemes'][0].name == 'pizza'
 
-    def test_refresh_scheme(self):
-        """ Test for refresh scheme """
-        refresh_url = '/s/refresh/{}/'
-        response = self.client.post(refresh_url.format(random.randint(1, 100)))
-        # check for delete non existent scheme
-        self.assertEqual(response.status_code, 404)
-        scheme = ShamirSS(**self.scheme_data)
-        shares = scheme.get_shares()
-        scheme.save()
-        # check for wrong http method error
-        response = self.client.get(refresh_url.format(scheme.id))
-        self.assertEqual(response.status_code, 405)
-        # link a document
-        self.document.scheme = scheme
-        self.document.save()
-        # check correct redirection to delete_related
-        expected_url = '/s/delete_related/{}/'.format(scheme.id)
-        response = self.client.post(refresh_url.format(scheme.id), follow=True)
-        self.assertRedirects(response, expected_url=expected_url, status_code=302, target_status_code=200)
-        # unlink document
-        self.document.scheme = None
-        self.document.save()
-        # check correct shares refresh
-        response = self.client.post(refresh_url.format(scheme.id), follow=True)
-        self.assertEqual(response.status_code, 200)
-        refreshed_shares = response.context['shares']
-        # check number of shares generated
-        self.assertEqual(scheme.n, len(refreshed_shares))
-        # check generated shares different from the previous
-        self.assertTrue(self.check_shares(shares, refreshed_shares))
 
-    def test_encrypt(self):
-        """ Test encrypt view """
-        enc_url = '/s/encrypt/{}/{}/'
-        # check non existent document and scheme
-        response = self.client.get(enc_url.format(random.randint(2, 100), random.randint(1, 100)))
-        self.assertEqual(response.status_code, 404)
-        response = self.client.post(enc_url.format(random.randint(2, 100), random.randint(1, 100)))
-        self.assertEqual(response.status_code, 404)
-        scheme = ShamirSS(**self.scheme_data)
-        shares = scheme.get_shares()
-        scheme.save()
-        # check get on existing scheme and document
-        response = self.client.get(enc_url.format(self.document.id, scheme.id))
-        self.assertEqual(response.status_code, 200)
-        # check successful redirect after encryption
-        random_shares = self._pick_k_random_values(shares, scheme.k)
-        post_data = {'share_' + str(share[0]): share[1] for share in random_shares}
-        post_data['scheme'] = scheme.id
-        expected_url = '/folder/{}/'.format(self.document.folder.id)
-        response = self.client.post(enc_url.format(self.document.id, scheme.id), post_data, follow=True)
-        self.assertRedirects(response, expected_url=expected_url, status_code=302, target_status_code=200)
-        # check document model changes
-        self.document.refresh_from_db()
-        self.assertTrue(os.path.isfile(self.document.file_path()))
-        self.assertIsNotNone(self.document.scheme)
-        self.assertEqual(self.document.filename(), self.TEST_FILE_NAME + '.enc')
-        # check document already encrypted
-        response = self.client.post(enc_url.format(self.document.id, scheme.id), post_data, follow=True)
-        self.assertFormError(response, 'form', None, 'Document already encrypted')
-        
-    def test_decrypt(self):
-        dec_url = '/s/decrypt/{}/'
-        # check non existent document
-        response = self.client.get(dec_url.format(random.randint(2, 100)))
-        self.assertEqual(response.status_code, 404)
-        response = self.client.post(dec_url.format(random.randint(2, 100)))
-        self.assertEqual(response.status_code, 404)
-        # check get on plaintext document
-        response = self.client.get(dec_url.format(self.document.id))
-        self.assertEqual(response.status_code, 404)
-        # check post on plaintext document
-        response = self.client.post(dec_url.format(self.document.id))
-        self.assertEqual(response.status_code, 404)
-        # encrypt file
-        scheme = ShamirSS(**self.scheme_data)
-        shares = scheme.get_shares()
-        scheme.save()
-        enc_file_path = scheme.encrypt_file(self.document.file_path(), shares)
-        os.remove(self.document.file_path())
-        self.document.file.name = enc_file_path
-        self.document.scheme = scheme
-        self.document.save()
-        # check successful get
-        response = self.client.get(dec_url.format(self.document.id))
-        self.assertEqual(response.status_code, 200)
-        # check successful redirect after decryption
-        random_shares = self._pick_k_random_values(shares, scheme.k)
-        post_data = {'share_' + str(share[0]): share[1] for share in random_shares}
-        post_data['scheme'] = scheme.id
-        expected_url = '/folder/{}/'.format(self.document.folder.id)
-        response = self.client.post(dec_url.format(self.document.id), post_data, follow=True)
-        self.assertRedirects(response, expected_url=expected_url, status_code=302, target_status_code=200)
-        self.document.refresh_from_db()
-        self.assertTrue(os.path.isfile(self.document.file_path()))
-        self.assertIsNone(self.document.scheme)
-        self.assertEqual(self.document.filename(), self.TEST_FILE_NAME)
+def test_index_shows_doc_count(auth_client):
+    scheme = ShamirSSFactory()
+    DocumentFactory(scheme=scheme)
+    resp = auth_client.get('/s/')
+    assert resp.context['schemes'][0].doc_count == 1
 
-    def check_shares(self, shares_1, shares_2):
-        """ helper function: return True if shares are different """
-        for i, j in zip(shares_1, shares_2):
-            if i[1] == j[1]:
-                return False
-        return True
 
-    def _pick_k_random_values(self, l, k):
-        """ select k distinct random values from l """
-        s = set()
-        while len(s) != k:
-            s.add(random.choice(l))
-        return list(s)
+def test_create_get(auth_client):
+    resp = auth_client.get('/s/create/')
+    assert resp.status_code == 200
+    assert 'form' in resp.context
 
-    @classmethod
-    def tearDownClass(cls):
-        pass
 
-    def tearDown(self):
-        os.remove(self.document.file_path())
+def test_create_post_generates_shares(auth_client):
+    resp = auth_client.post('/s/create/', SCHEME_DATA)
+    assert resp.status_code == 200
+    assert len(resp.context['shares']) == SCHEME_DATA['n']
+    assert ShamirSS.objects.filter(name='test').exists()
+
+
+# ---- delete -------------------------------------------------------------------
+
+def test_create_post_invalid(auth_client):
+    # k > n is invalid -> form errors, create.html re-rendered, nothing saved
+    resp = auth_client.post('/s/create/', {'name': 'x', 'mers_exp': 89, 'k': 5, 'n': 3})
+    assert resp.status_code == 200
+    assert 'form' in resp.context
+    assert not ShamirSS.objects.exists()
+
+
+def test_delete_missing_scheme_404(auth_client):
+    assert auth_client.post('/s/delete/999999/').status_code == 404
+
+
+def test_delete_get_not_allowed(auth_client):
+    scheme = ShamirSSFactory()
+    assert auth_client.get('/s/delete/%d/' % scheme.id).status_code == 405
+
+
+def test_delete_scheme_without_files(auth_client):
+    scheme = ShamirSSFactory()
+    resp = auth_client.post('/s/delete/%d/' % scheme.id, follow=True)
+    assert resp.redirect_chain[-1][0] == '/s/'
+    assert not ShamirSS.objects.filter(pk=scheme.id).exists()
+
+
+def test_delete_with_files_needs_mode(auth_client):
+    scheme = ShamirSSFactory()
+    DocumentFactory(scheme=scheme)
+    resp = auth_client.post('/s/delete/%d/' % scheme.id, follow=True)
+    assert resp.redirect_chain[-1][0] == '/s/'
+    assert ShamirSS.objects.filter(pk=scheme.id).exists()   # nothing happened
+
+
+def test_delete_with_files(auth_client):
+    scheme = ShamirSSFactory()
+    doc = DocumentFactory(scheme=scheme)
+    path = doc.file_path()
+    auth_client.post('/s/delete/%d/' % scheme.id, {'mode': 'with_files'})
+    assert not ShamirSS.objects.filter(pk=scheme.id).exists()
+    assert not Document.objects.filter(pk=doc.id).exists()
+    assert not os.path.isfile(path)
+
+
+def test_delete_scheme_only_keeps_files(auth_client):
+    scheme = ShamirSSFactory()
+    doc = DocumentFactory(scheme=scheme)
+    path = doc.file_path()
+    auth_client.post('/s/delete/%d/' % scheme.id, {'mode': 'scheme_only'})
+    assert not ShamirSS.objects.filter(pk=scheme.id).exists()
+    doc.refresh_from_db()
+    assert doc.scheme_id is None            # detached, not deleted
+    assert os.path.isfile(path)             # file kept
+
+
+# ---- refresh ------------------------------------------------------------------
+
+def test_refresh_missing_scheme_404(auth_client):
+    assert auth_client.post('/s/refresh/999999/').status_code == 404
+
+
+def test_refresh_get_not_allowed(auth_client):
+    scheme = ShamirSSFactory()
+    assert auth_client.get('/s/refresh/%d/' % scheme.id).status_code == 405
+
+
+def test_refresh_without_files(auth_client):
+    scheme = ShamirSSFactory(**SCHEME_DATA)
+    old = scheme.get_shares()
+    scheme.save()
+    resp = auth_client.post('/s/refresh/%d/' % scheme.id)
+    assert resp.status_code == 200
+    new = resp.context['shares']
+    assert len(new) == scheme.n
+    assert [v for _, v in new] != [v for _, v in old]
+
+
+def test_refresh_with_files_needs_mode(auth_client):
+    scheme = ShamirSSFactory()
+    DocumentFactory(scheme=scheme)
+    resp = auth_client.post('/s/refresh/%d/' % scheme.id, follow=True)
+    assert resp.redirect_chain[-1][0] == '/s/'
+
+
+def test_refresh_with_files(auth_client):
+    scheme = ShamirSSFactory()
+    doc = DocumentFactory(scheme=scheme)
+    path = doc.file_path()
+    resp = auth_client.post('/s/refresh/%d/' % scheme.id, {'mode': 'with_files'})
+    assert resp.status_code == 200
+    assert not Document.objects.filter(pk=doc.id).exists()
+    assert not os.path.isfile(path)
+
+
+def test_refresh_scheme_only_keeps_files(auth_client):
+    scheme = ShamirSSFactory()
+    doc = DocumentFactory(scheme=scheme)
+    resp = auth_client.post('/s/refresh/%d/' % scheme.id, {'mode': 'scheme_only'})
+    assert resp.status_code == 200
+    doc.refresh_from_db()
+    assert doc.scheme_id == scheme.id       # still linked
+
+
+# ---- encrypt / decrypt --------------------------------------------------------
+
+def test_encrypt_missing_404(auth_client):
+    assert auth_client.get('/s/encrypt/999998/999999/').status_code == 404
+    assert auth_client.post('/s/encrypt/999998/999999/').status_code == 404
+
+
+def test_encrypt_flow(auth_client):
+    scheme = ShamirSSFactory(k=2, n=3)
+    shares = scheme.get_shares()
+    scheme.save()
+    doc = DocumentFactory()
+
+    assert auth_client.get('/s/encrypt/%d/%d/' % (doc.id, scheme.id)).status_code == 200
+
+    resp = auth_client.post('/s/encrypt/%d/%d/' % (doc.id, scheme.id),
+                            _share_post(scheme, shares), follow=True)
+    assert resp.redirect_chain[-1][0] == '/folder/%d/' % doc.folder.id
+    doc.refresh_from_db()
+    assert doc.scheme_id == scheme.id
+    assert doc.filename().endswith('.enc')
+
+    # encrypting again reports the error
+    resp = auth_client.post('/s/encrypt/%d/%d/' % (doc.id, scheme.id),
+                            _share_post(scheme, shares))
+    assert 'Document already encrypted' in resp.context['form'].non_field_errors()
+
+
+def test_encrypt_wrong_shares(auth_client):
+    scheme = ShamirSSFactory(k=2, n=3)
+    shares = scheme.get_shares()
+    scheme.save()
+    doc = DocumentFactory()
+    # enough shares by count, but a wrong value -> recovery fails
+    data = {'scheme': scheme.id, 'share_1': shares[0][1], 'share_2': shares[0][1]}
+    resp = auth_client.post('/s/encrypt/%d/%d/' % (doc.id, scheme.id), data)
+    assert 'Wrong shares values' in resp.context['form'].non_field_errors()
+
+
+def test_encrypt_missing_file_error(auth_client):
+    scheme = ShamirSSFactory(k=2, n=3)
+    shares = scheme.get_shares()
+    scheme.save()
+    doc = DocumentFactory()
+    os.remove(doc.file_path())          # file gone -> encrypt_file returns None
+    resp = auth_client.post('/s/encrypt/%d/%d/' % (doc.id, scheme.id),
+                            _share_post(scheme, shares))
+    assert 'Encryption error' in resp.context['form'].non_field_errors()
+
+
+def test_decrypt_plaintext_404(auth_client):
+    doc = DocumentFactory()      # scheme is None
+    assert auth_client.get('/s/decrypt/%d/' % doc.id).status_code == 404
+
+
+def test_decrypt_flow(auth_client):
+    scheme = ShamirSSFactory(k=2, n=3)
+    shares = scheme.get_shares()
+    scheme.save()
+    doc = DocumentFactory()
+    # encrypt it first
+    enc = scheme.encrypt_file(doc.file_path(), shares)
+    os.remove(doc.file_path())
+    doc.file.name = enc
+    doc.scheme = scheme
+    doc.save()
+
+    assert auth_client.get('/s/decrypt/%d/' % doc.id).status_code == 200
+
+    resp = auth_client.post('/s/decrypt/%d/' % doc.id,
+                            _share_post(scheme, shares), follow=True)
+    assert resp.redirect_chain[-1][0] == '/folder/%d/' % doc.folder.id
+    doc.refresh_from_db()
+    assert doc.scheme_id is None
+    assert not doc.filename().endswith('.enc')
+
+
+def test_decrypt_missing_file_returns_to_form(auth_client):
+    scheme = ShamirSSFactory(k=2, n=3)
+    shares = scheme.get_shares()
+    scheme.save()
+    doc = DocumentFactory()
+    os.remove(doc.file_path())
+    doc.file.name = 'documents/missing.enc'   # marked encrypted, file absent
+    doc.scheme = scheme
+    doc.save()
+    resp = auth_client.post('/s/decrypt/%d/' % doc.id, _share_post(scheme, shares))
+    assert resp.status_code == 200            # re-rendered, not redirected
+    doc.refresh_from_db()
+    assert doc.scheme_id == scheme.id         # still encrypted

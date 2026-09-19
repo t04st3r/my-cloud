@@ -18,6 +18,8 @@ from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from django.views.generic import TemplateView
+from my_cloud.forms import BootstrapAuthenticationForm
 
 
 urlpatterns = [
@@ -25,9 +27,13 @@ urlpatterns = [
     path('', include('file_handler.urls')),
     path('s/', include('shared_secret.urls')),
     path('o/', include('oauth2_provider.urls', namespace='oauth2_provider')),
-    path('login/', auth_views.LoginView.as_view(template_name='auth/login.html')),
+    path('login/', auth_views.LoginView.as_view(
+        template_name='auth/login.html',
+        authentication_form=BootstrapAuthenticationForm,
+    )),
     path('logout/', auth_views.LogoutView.as_view()),
-    path('api/', include('api.urls'))
+    path('api/', include('api.urls')),
+    path('help/', TemplateView.as_view(template_name='help.html'), name='help'),
 ]
 
 if settings.DEBUG:

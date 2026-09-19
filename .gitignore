@@ -1,8 +1,12 @@
 /.idea/*
 /media/*
-/static/*
-!/static/my_cloud/
+/staticfiles/
 /__pycache__/
-/mycloudvenv/
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+.venv/
+.env
 *.pyc
 *.pyo

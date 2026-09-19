@@ -4,17 +4,168 @@
 
 <div class="card">
     <div class="card-header">
-        Create new folder
+        Upload files
     </div>
     <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
+        <form method="post" enctype="multipart/form-data" id="upload-form">
             {% csrf_token %}
-            {{ form.as_p }}
-            <button class="btn btn-primary" type="submit"><i class="fas fa-file-upload"></i> Upload</button>
-            <a class="btn btn-primary" href="/folder/{{ folder.id }}"><i class="fas fa-arrow-circle-left"></i> Back to {{ folder.name }}</a>
+            {{ form.non_field_errors }}
+
+            <div id="dropzone" class="dropzone">
+                <div class="dropzone-prompt">
+                    <i class="fas fa-cloud-upload-alt dropzone-icon"></i>
+                    <p class="mb-1"><strong>Drag &amp; drop files here</strong></p>
+                    <p class="text-muted mb-0">or click to browse (you can add several)</p>
+                </div>
+            </div>
+
+            {# The real file input, hidden and driven by the dropzone above #}
+            <div class="d-none">{{ form.file }}</div>
+            {{ form.file.errors }}
+
+            <div id="preview-list" class="preview-list"></div>
+
+            <div class="form-group mt-3">
+                {{ form.folder.label_tag }}
+                {{ form.folder }}
+            </div>
+
+            <button id="upload-submit" class="btn btn-primary" type="submit" disabled>
+                <i class="fas fa-file-upload"></i> Upload <span id="upload-count"></span>
+            </button>
+            <a class="btn btn-secondary" href="/folder/{{ folder.id }}">
+                <i class="fas fa-arrow-circle-left"></i> Back to {{ folder.name }}
+            </a>
         </form>
     </div>
 </div>
 
-{% endblock %}
+<script>
+;(function(){
+    var input = document.getElementById('id_file')
+    var dz = document.getElementById('dropzone')
+    var list = document.getElementById('preview-list')
+    var submit = document.getElementById('upload-submit')
+    var countEl = document.getElementById('upload-count')
+    if (!input || !dz) return
 
+    var files = []   // File objects currently selected
+
+    function humanSize(bytes){
+        if (bytes < 1024) return bytes + ' B'
+        var units = ['KB', 'MB', 'GB', 'TB'], i = -1
+        do { bytes /= 1024; i++ } while (bytes >= 1024 && i < units.length - 1)
+        return bytes.toFixed(1) + ' ' + units[i]
+    }
+
+    function iconFor(name){
+        var ext = (name.split('.').pop() || '').toLowerCase()
+        var map = {
+            pdf: 'fa-file-pdf',
+            doc: 'fa-file-word', docx: 'fa-file-word',
+            xls: 'fa-file-excel', xlsx: 'fa-file-excel', csv: 'fa-file-csv',
+            ppt: 'fa-file-powerpoint', pptx: 'fa-file-powerpoint',
+            zip: 'fa-file-archive', gz: 'fa-file-archive', tar: 'fa-file-archive',
+            rar: 'fa-file-archive', '7z': 'fa-file-archive', enc: 'fa-file-archive',
+            txt: 'fa-file-alt', md: 'fa-file-alt',
+            json: 'fa-file-code', xml: 'fa-file-code', js: 'fa-file-code',
+            py: 'fa-file-code', html: 'fa-file-code', css: 'fa-file-code',
+            mp3: 'fa-file-audio', wav: 'fa-file-audio', ogg: 'fa-file-audio',
+            mp4: 'fa-file-video', mov: 'fa-file-video', avi: 'fa-file-video', mkv: 'fa-file-video'
+        }
+        return map[ext] || 'fa-file'
+    }
+
+    function sameFile(a, b){
+        return a.name === b.name && a.size === b.size && a.lastModified === b.lastModified
+    }
+
+    function syncInput(){
+        // Rebuild the real input's FileList from our array (DataTransfer API).
+        try {
+            var dt = new DataTransfer()
+            files.forEach(function(f){ dt.items.add(f) })
+            input.files = dt.files
+        } catch (e) {}
+        submit.disabled = files.length === 0
+        countEl.textContent = files.length ? '(' + files.length + ')' : ''
+    }
+
+    function addFiles(fileList){
+        Array.prototype.forEach.call(fileList, function(f){
+            if (!files.some(function(x){ return sameFile(x, f) })) files.push(f)
+        })
+        syncInput()
+        render()
+    }
+
+    function removeAt(i){
+        files.splice(i, 1)
+        syncInput()
+        render()
+    }
+
+    function render(){
+        list.innerHTML = ''
+        files.forEach(function(f, i){
+            var item = document.createElement('div')
+            item.className = 'preview-item'
+
+            var media
+            if (f.type.indexOf('image/') === 0){
+                media = document.createElement('img')
+                media.className = 'preview-thumb'
+                var reader = new FileReader()
+                reader.onload = function(e){ media.src = e.target.result }
+                reader.readAsDataURL(f)
+            } else {
+                media = document.createElement('i')
+                media.className = 'fas ' + iconFor(f.name) + ' preview-file-icon'
+            }
+
+            var meta = document.createElement('div')
+            meta.className = 'preview-meta'
+            var nm = document.createElement('div')
+            nm.className = 'preview-name'
+            nm.textContent = f.name
+            var sz = document.createElement('div')
+            sz.className = 'text-muted'
+            sz.textContent = humanSize(f.size)
+            meta.appendChild(nm); meta.appendChild(sz)
+
+            var rm = document.createElement('button')
+            rm.type = 'button'
+            rm.className = 'btn btn-sm btn-outline-secondary preview-remove'
+            rm.innerHTML = '<i class="fas fa-times"></i>'
+            rm.addEventListener('click', function(){ removeAt(i) })
+
+            item.appendChild(media); item.appendChild(meta); item.appendChild(rm)
+            list.appendChild(item)
+        })
+    }
+
+    dz.addEventListener('click', function(){ input.click() })
+    input.addEventListener('change', function(){
+        if (input.files && input.files.length) addFiles(input.files)
+    })
+
+    ;['dragenter', 'dragover'].forEach(function(ev){
+        dz.addEventListener(ev, function(e){
+            e.preventDefault(); e.stopPropagation(); dz.classList.add('dragover')
+        })
+    })
+    ;['dragleave', 'drop'].forEach(function(ev){
+        dz.addEventListener(ev, function(e){
+            e.preventDefault(); e.stopPropagation(); dz.classList.remove('dragover')
+        })
+    })
+    dz.addEventListener('drop', function(e){
+        var dropped = e.dataTransfer && e.dataTransfer.files
+        if (dropped && dropped.length) addFiles(dropped)
+    })
+
+    syncInput()  // initial: nothing selected, submit disabled
+})()
+</script>
+
+{% endblock %}

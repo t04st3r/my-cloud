@@ -1,0 +1,201 @@
+{% extends 'base.html' %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body);"></script>
+{% endblock %}
+
+{% block content %}
+{% verbatim %}
+<div class="card">
+    <div class="card-body">
+
+        <h3>How Shamir's Secret Sharing works</h3>
+        <p class="text-muted">
+            The maths behind My Cloud's encryption, explained from scratch.
+        </p>
+
+        <hr>
+
+        <h5>The idea in one sentence</h5>
+        <p>
+            A secret is split into <strong>\(n\)</strong> pieces called <em>shares</em>, handed out to
+            different people, so that <strong>any \(k\) of them together</strong> can reconstruct the
+            secret — but <strong>any \(k-1\)</strong> of them learn absolutely nothing about it. We call
+            \(k\) the <em>threshold</em>. This is what makes it perfect for
+            <strong>separation of duties</strong>: no single keyholder can decrypt a file alone; a
+            quorum of \(k\) trusted parties must cooperate.
+        </p>
+        <p>
+            Crucially, the scheme is <strong>information-theoretically secure</strong>: with fewer than
+            \(k\) shares the secret is not merely <em>hard</em> to compute (like breaking RSA), it is
+            genuinely <em>undetermined</em> — every possible secret remains equally likely, even to an
+            attacker with unlimited time and computing power.
+        </p>
+
+        <h5>The trick: points on a polynomial</h5>
+        <p>
+            The whole scheme rests on one fact from school algebra:
+        </p>
+        <blockquote class="blockquote">
+            <p class="mb-0">\(k\) points determine a unique polynomial of degree \(k-1\).</p>
+        </blockquote>
+        <p>
+            Two points determine a line (degree \(1\)); three points determine a parabola
+            (degree \(2\)); and so on. Shamir's insight was to run this backwards:
+        </p>
+        <ul>
+            <li>Hide the secret <strong>\(S\)</strong> as the value of a polynomial at \(x = 0\).</li>
+            <li>Pick the other coefficients at random, giving a random curve of degree \(k-1\).</li>
+            <li>Hand out points on that curve as the shares.</li>
+        </ul>
+
+        <h5>Splitting the secret</h5>
+        <p>
+            To split a secret \(S\) with threshold \(k\), choose \(k-1\) random coefficients
+            \(a_1, a_2, \dots, a_{k-1}\) and build the polynomial
+        </p>
+        \[ f(x) = S + a_1 x + a_2 x^2 + \dots + a_{k-1} x^{k-1} \]
+        <p>
+            Notice \(f(0) = S\): the secret is the y-intercept. The \(n\) shares are simply the points
+        </p>
+        \[ (1, f(1)),\ (2, f(2)),\ \dots,\ (n, f(n)) \]
+        <p>
+            Each person receives one point. In the figure below, the secret \(S\) sits on the y-axis
+            and five shares are read off the same degree-2 curve (so here \(k = 3\)).
+        </p>
+
+        <figure class="help-figure">
+            <svg viewBox="0 0 400 260" role="img"
+                 aria-label="A quadratic curve; the secret sits at x=0 and shares are points at x=1 to 5">
+                <line class="help-axis" x1="40" y1="15" x2="40" y2="220"/>
+                <line class="help-axis" x1="40" y1="220" x2="388" y2="220"/>
+                <polyline class="help-curve"
+                    points="40,100 74,114 108,124 142,130 176,132 210,130 244,124 278,114 312,100 346,82 380,60"/>
+                <!-- secret -->
+                <circle class="help-point" cx="40" cy="100" r="5.5"/>
+                <text class="help-label" x="12" y="104">S</text>
+                <!-- shares -->
+                <circle class="help-share" cx="108" cy="124" r="4.5"/>
+                <circle class="help-share" cx="176" cy="132" r="4.5"/>
+                <circle class="help-share" cx="244" cy="124" r="4.5"/>
+                <circle class="help-share" cx="312" cy="100" r="4.5"/>
+                <circle class="help-share" cx="380" cy="60" r="4.5"/>
+                <!-- x ticks -->
+                <text class="help-tick" x="36" y="235">0</text>
+                <text class="help-tick" x="104" y="235">1</text>
+                <text class="help-tick" x="172" y="235">2</text>
+                <text class="help-tick" x="240" y="235">3</text>
+                <text class="help-tick" x="308" y="235">4</text>
+                <text class="help-tick" x="376" y="235">5</text>
+                <text class="help-tick" x="300" y="252">share index (x)</text>
+            </svg>
+            <figcaption>Fig. 1 — The secret is the curve's value at \(x = 0\); the shares are points at \(x = 1, 2, \dots, n\).</figcaption>
+        </figure>
+
+        <h5>Recovering the secret</h5>
+        <p>
+            Bring any \(k\) shares back together and there is exactly one degree-\((k-1)\) curve through
+            them. Reconstruct that curve and evaluate it at \(x = 0\) to read off the secret. The
+            standard tool is <strong>Lagrange interpolation</strong>:
+        </p>
+        \[ f(x) = \sum_{j=1}^{k} y_j \prod_{\substack{1 \le m \le k \\ m \neq j}} \frac{x - x_m}{x_j - x_m} \]
+        <p>
+            We only ever need \(x = 0\), so the secret is
+        </p>
+        \[ S = f(0) = \sum_{j=1}^{k} y_j \prod_{\substack{1 \le m \le k \\ m \neq j}} \frac{-x_m}{x_j - x_m} \]
+        <p>
+            This is exactly what My Cloud computes when you supply your shares to decrypt a file.
+        </p>
+
+        <h5>Why fewer than \(k\) shares reveal nothing</h5>
+        <p>
+            Suppose \(k = 3\) but you hold only \(2\) shares. Two points fix a parabola with one degree
+            of freedom left over — so there is a whole family of parabolas through your two points, and
+            <em>each one hits a different value at \(x = 0\)</em>. Every candidate secret is consistent
+            with what you know, and they are all equally likely. Your two shares tell you nothing about
+            which is the real \(S\).
+        </p>
+
+        <figure class="help-figure">
+            <svg viewBox="0 0 400 260" role="img"
+                 aria-label="Two shared points with three different curves passing through them, each hitting a different secret at x=0">
+                <line class="help-axis" x1="40" y1="15" x2="40" y2="220"/>
+                <line class="help-axis" x1="40" y1="220" x2="388" y2="220"/>
+                <!-- three curves through the same two points -->
+                <polyline class="help-curve"
+                    points="40,100 74,114 108,124 142,130 176,132 210,130 244,124 278,114 312,100 346,82 380,60"/>
+                <line class="help-curve-b" x1="40" y1="164" x2="380" y2="84"/>
+                <polyline class="help-curve-c"
+                    points="40,36 74,72 108,100 142,120 176,132 210,136 244,132 278,120 312,100 346,72 380,36"/>
+                <!-- the two known shares -->
+                <circle class="help-point" cx="176" cy="132" r="5.5"/>
+                <circle class="help-point" cx="312" cy="100" r="5.5"/>
+                <!-- candidate secrets on the y-axis -->
+                <circle class="help-share" cx="40" cy="36" r="4"/>
+                <circle class="help-share" cx="40" cy="100" r="4"/>
+                <circle class="help-share" cx="40" cy="164" r="4"/>
+                <text class="help-label" x="48" y="40">? </text>
+                <text class="help-label" x="48" y="104">?</text>
+                <text class="help-label" x="48" y="168">?</text>
+                <text class="help-tick" x="150" y="150">share</text>
+                <text class="help-tick" x="300" y="118">share</text>
+            </svg>
+            <figcaption>Fig. 2 — With only \(k-1 = 2\) shares, infinitely many curves fit, each implying a different secret at \(x = 0\). Nothing is leaked.</figcaption>
+        </figure>
+
+        <h5>Doing it with whole numbers: finite fields</h5>
+        <p>
+            Real-number arithmetic would leak information (the size and shape of the curve hint at the
+            secret) and suffer rounding errors. So all the maths is done in a
+            <strong>finite field</strong> — integers modulo a prime \(p\):
+        </p>
+        \[ f(x) = \Big( S + a_1 x + \dots + a_{k-1} x^{k-1} \Big) \bmod p \]
+        <p>
+            Every coefficient is a uniformly random element of \(\{0, 1, \dots, p-1\}\), which is what
+            makes the "each secret equally likely" argument exact. Division in the Lagrange formula
+            becomes multiplication by a <em>modular inverse</em>, found with the extended Euclidean
+            algorithm.
+        </p>
+        <p>
+            My Cloud uses <strong>Mersenne primes</strong> \(p = 2^{q} - 1\) for this field, which is
+            what the <em>"field size exponent"</em> \(q\) on the create-scheme form selects
+            (\(q \in \{89, 107, 127\}\)). A larger \(q\) means a larger field and longer share strings,
+            but does not change how many shares you need.
+        </p>
+
+        <h5>How My Cloud uses it</h5>
+        <p>
+            When you create a scheme, My Cloud generates a random secret \(S\) and its \(n\) shares, and
+            stores only a salted hash of \(S\) (never the shares). To encrypt a file it derives a
+            symmetric key from \(S\) and encrypts with <a href="https://cryptography.io/en/latest/fernet/">Fernet</a>
+            (AES). To decrypt, you re-enter any \(k\) of your shares; the secret is reconstructed by
+            interpolation, checked against the stored hash, and the key is re-derived on the fly. The
+            shares themselves are never stored anywhere — lose more than \(n-k\) of them and the file is
+            gone for good.
+        </p>
+
+        <hr>
+
+        <h5>References</h5>
+        <ul>
+            <li>
+                Adi Shamir, <em>How to Share a Secret</em>, Communications of the ACM, 1979 —
+                <a href="https://web.mit.edu/6.857/OldStuff/Fall03/ref/Shamir-HowToShareASecret.pdf">the original paper (PDF)</a>.
+            </li>
+            <li>
+                <a href="https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing">Shamir's Secret Sharing</a> on Wikipedia.
+            </li>
+            <li>
+                <a href="https://en.wikipedia.org/wiki/Lagrange_polynomial">Lagrange interpolation</a> — the reconstruction method.
+            </li>
+        </ul>
+
+        <a class="btn btn-primary" href="/s/create/"><i class="fas fa-cogs"></i> Create a scheme</a>
+        <a class="btn btn-secondary" href="/"><i class="fas fa-list-ul"></i> Back to files</a>
+    </div>
+</div>
+{% endverbatim %}
+{% endblock %}

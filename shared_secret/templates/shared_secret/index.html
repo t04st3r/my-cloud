@@ -29,18 +29,24 @@
         <td>{{ scheme.k }}</td>
         <td>{{ scheme.n }}</td>
         <td>
-            <form method="post" action="/s/refresh/{{ scheme.id }}/">
-                {% csrf_token %}
-                {{ r_form.as_p }}
-                <button type="submit" class="btn btn-warning float-right enc_dec"><i class="fas fa-key"></i> Regenerate
-                </button>
-            </form>
-             <form method="post" action="/s/delete/{{ scheme.id }}/">
-                {% csrf_token %}
-                {{ d_form.as_p }}
-                <button type="submit" class="btn btn-danger float-right"><i class="far fa-trash-alt"></i> Delete
-                </button>
-            </form>
+            <button type="button"
+                    class="btn btn-warning float-right enc_dec scheme-action"
+                    data-action="regenerate"
+                    data-id="{{ scheme.id }}"
+                    data-url="/s/refresh/{{ scheme.id }}/"
+                    data-name="{{ scheme.name }}"
+                    data-count="{{ scheme.doc_count }}">
+                <i class="fas fa-key"></i> Regenerate
+            </button>
+            <button type="button"
+                    class="btn btn-danger float-right scheme-action"
+                    data-action="delete"
+                    data-id="{{ scheme.id }}"
+                    data-url="/s/delete/{{ scheme.id }}/"
+                    data-name="{{ scheme.name }}"
+                    data-count="{{ scheme.doc_count }}">
+                <i class="far fa-trash-alt"></i> Delete
+            </button>
         </td>
     </tr>
 
@@ -55,5 +61,103 @@
 <p>No schemes found, click on Create Scheme to create one</p>
 
 {% endif %}
+
+{# Per-scheme affected-file lists, cloned into the modal when opened #}
+{% for scheme in schemes %}
+    {% if scheme.doc_count %}
+    <div id="scheme-files-{{ scheme.id }}" class="d-none">
+        <table class="table table-sm scheme-files-table">
+            <thead class="thead-dark">
+            <tr>
+                <th scope="col">Affected file</th>
+                <th scope="col">Created at</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for doc in scheme.document_set.all %}
+            <tr>
+                <td><i class="fas fa-file-archive"></i> {{ doc.full_path }}</td>
+                <td>{{ doc.creation_date|date:'Y-m-d H:i' }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+{% endfor %}
+
+{# Confirmation modal for the dangerous delete / regenerate actions #}
+<div id="scheme-modal" class="scheme-modal-backdrop" style="display:none">
+    <div class="scheme-modal-dialog card">
+        <div class="card-header">
+            <strong id="scheme-modal-title">Hold on!</strong>
+        </div>
+        <div class="card-body">
+            <p id="scheme-modal-message"></p>
+            <div id="scheme-modal-files"></div>
+            <form id="scheme-action-form" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="mode" id="scheme-action-mode">
+            </form>
+            <div class="scheme-modal-actions">
+                <button type="button" id="scheme-modal-cancel" class="btn btn-secondary">Cancel</button>
+                <button type="button" id="scheme-modal-scheme-only" class="btn btn-warning"></button>
+                <button type="button" id="scheme-modal-with-files" class="btn btn-danger"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+;(function(){
+    var $modal = $('#scheme-modal')
+    var $form = $('#scheme-action-form')
+    var $mode = $('#scheme-action-mode')
+    var $title = $('#scheme-modal-title')
+    var $msg = $('#scheme-modal-message')
+    var $withFiles = $('#scheme-modal-with-files')
+    var $schemeOnly = $('#scheme-modal-scheme-only')
+    var $files = $('#scheme-modal-files')
+
+    function openModal(action, id, url, name, count){
+        var isDelete = action === 'delete'
+        var verb = isDelete ? 'delete' : 'regenerate'
+        var Verb = isDelete ? 'Delete' : 'Regenerate'
+        $form.attr('action', url)
+        if (count > 0){
+            $title.text('Hold on!')
+            $msg.html('If you ' + verb + ' the scheme <strong>' + name + '</strong>, the <strong>' +
+                      count + '</strong> file(s) it encrypts can no longer be recovered. ' +
+                      'What do you want to do?')
+            $files.html($('#scheme-files-' + id).html() || '')
+            $withFiles.text(Verb + ' scheme + delete ' + count + ' file(s)').show()
+            $schemeOnly.text(Verb + ' scheme only (keep unrecoverable files)').show()
+        } else {
+            $title.text(Verb + ' scheme')
+            $msg.html('Are you sure you want to ' + verb + ' the scheme <strong>' + name + '</strong>?')
+            $files.empty()
+            $withFiles.text(Verb).show()
+            $schemeOnly.hide()
+        }
+        $modal.css('display', 'flex')
+    }
+
+    function submitWith(mode){
+        $mode.val(mode)
+        $form.get(0).submit()
+    }
+
+    $('.scheme-action').on('click', function(){
+        var $b = $(this)
+        openModal($b.data('action'), $b.data('id'), $b.data('url'), $b.data('name'),
+                  parseInt($b.data('count'), 10) || 0)
+    })
+    $withFiles.on('click', function(){ submitWith('with_files') })
+    $schemeOnly.on('click', function(){ submitWith('scheme_only') })
+    $('#scheme-modal-cancel').on('click', function(){ $modal.hide() })
+    $modal.on('click', function(e){ if (e.target === this) $modal.hide() })
+    $(document).on('keydown', function(e){ if (e.key === 'Escape') $modal.hide() })
+})()
+</script>
 
 {% endblock %}

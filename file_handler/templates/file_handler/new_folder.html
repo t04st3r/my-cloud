@@ -9,7 +9,15 @@
     <div class="card-body">
         <form method="post">
             {% csrf_token %}
-            {{ form.as_p }}
+            {{ form.non_field_errors }}
+            {% for field in form %}
+            <div class="form-group">
+                {{ field.label_tag }}
+                {{ field }}
+                {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text }}</small>{% endif %}
+                {{ field.errors }}
+            </div>
+            {% endfor %}
             <button class="btn btn-primary" type="submit"><i class="far fa-folder"></i> Create</button>
             {% if parent is None %}
                 <a class="btn btn-primary" href="/"><i class="fas fa-tree"></i> Back to root</a>

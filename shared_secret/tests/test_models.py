@@ -1,147 +1,121 @@
-from django.test import TestCase
-from shared_secret.models import ShamirSS
-from shared_secret.forms import SSForm
-import django.contrib.auth.hashers as hashers
-from django.conf import settings
+import base64
 import os
-import hashlib
-import random
+
+import django.contrib.auth.hashers as hashers
+import pytest
+from django.conf import settings
+
+from shared_secret.models import ShamirSS
+from tests.factories import ShamirSSFactory
+
+pytestmark = pytest.mark.django_db
 
 
-class ShamirSSTestCase(TestCase):
-    """ Test for shared secret Model """
+def _pick(shares, k):
+    """Return the first k shares (distinct positions)."""
+    return list(shares[:k])
 
-    def setUp(self):
-        self.form_data = {'name': 'test', 'mers_exp':  107, 'k': 4, 'n': 18}
-        self.scheme = ShamirSS(**self.form_data)
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+def test_str_and_difference():
+    scheme = ShamirSSFactory(name='pizza', k=4, n=18)
+    assert str(scheme) == 'pizza (4, 18)'
+    assert scheme.difference() == 14
 
-    def test_difference(self):
-        """ Test difference method works """
-        self.assertTrue(self.scheme.difference() == 14)
 
-    def test_scheme_fileds(self):
-        """ Test for correct fields validation with SSForm """
-        valid_form = SSForm(data=self.form_data)
-        self.assertTrue(valid_form.is_valid())
-        # Test illegal value for mers_exp
-        self.form_data['mers_exp'] = 3
-        invalid_form = SSForm(data=self.form_data)
-        self.assertFalse(invalid_form.is_valid())
-        # Test illegal value for k
-        self.form_data['mers_exp'] = 107
-        self.form_data['k'] = self.scheme.MAX_N + 1
-        invalid_form = SSForm(data=self.form_data)
-        self.assertFalse(invalid_form.is_valid())
-        # Test illegal value for n
-        self.form_data['k'] = 4
-        self.form_data['n'] = self.scheme.MAX_N + 1
-        invalid_form = SSForm(data=self.form_data)
-        self.assertFalse(invalid_form.is_valid())
-        # Test illegal value for n < k
-        self.form_data['n'] = 3
-        invalid_form = SSForm(data=self.form_data)
-        self.assertFalse(invalid_form.is_valid())
-        self.form_data['n'] = 18
+def test_encode_decode_roundtrip():
+    scheme = ShamirSSFactory()
+    value = 123456789012345
+    decoded = scheme.decode_shares(scheme.encode_shares([(1, value)]))
+    assert decoded[0] == (1, value)
 
-    def test_scheme_correctness(self):
-        """ Test for successful shares generation and secret recovery """
-        # check correct base64 encoding-decoding
-        random_int = random.randint(10000000000, 100000000000)
-        enc_dec = self.scheme.decode_shares(
-            self.scheme.encode_shares([(0, random_int)]))
-        self.assertTrue(random_int == enc_dec[0][1])
-        # check all shares generated correctly
-        shares = self.scheme.get_shares()
-        encoded_secret = self.scheme.secret
-        self.assertTrue(len(shares) == self.scheme.n)
-        # check hashed secret is correct picking k random shares
-        rnd_shares = self._pick_k_random_values(shares, self.scheme.k)
-        rec_secret = self.scheme.get_secret(
-            self.scheme.decode_shares(rnd_shares))
-        self.assertTrue(hashers.check_password(
-            str(rec_secret), encoded_secret))
-        # check hashed secret is correct picking n random shares
-        secret_all = self.scheme.get_secret(self.scheme.decode_shares(shares))
-        self.assertTrue(hashers.check_password(
-            str(secret_all), encoded_secret))
-        # check value error if lower than k shares provided
-        rnd_shares_2 = self._pick_k_random_values(shares, self.scheme.k - 1)
-        self.assertRaises(ValueError, lambda: self.scheme.get_secret(
-            self.scheme.decode_shares(rnd_shares_2)))
-        # check for wrong shares
-        rnd_shares_3 = self._pick_k_random_values(shares, self.scheme.k)
-        rnd_shares_3[0] = (rnd_shares_3[0][0], rnd_shares_3[1][1])
-        wrong_secret = self.scheme.get_secret(
-            self.scheme.decode_shares(rnd_shares_3))
-        self.assertFalse(hashers.check_password(
-            str(wrong_secret), encoded_secret))
 
-    def test_file_encryption_decryption(self):
-        """ Test successful file encryption and decryption """
-        # create two test files with same content
-        file_name_1 = settings.MEDIA_ROOT + 'test_file_1.txt'
-        file_name_2 = settings.MEDIA_ROOT + 'test_file_2.txt'
-        content = 'some string just to fill this file up\n\n'
-        test_file_1 = open(file_name_1, 'w+')
-        test_file_1.write(content)
-        test_file_1.close()
-        test_file_2 = open(file_name_2, 'w+')
-        test_file_2.write(content)
-        test_file_2.close()
-        # create shares for the scheme
-        shares = self.scheme.get_shares()
-        # encrypt/decrypt test file 1
-        enc_dec_test_file_1 = self.scheme.decrypt_file(
-            settings.MEDIA_ROOT + self.scheme.encrypt_file(file_name_1, shares), shares)
-        # encrypt/decrypt test file 2
-        enc_dec_test_file_2 = self.scheme.decrypt_file(
-            settings.MEDIA_ROOT + self.scheme.encrypt_file(file_name_2, shares), shares)
-        # create hashes of the two files
-        hash_1 = self.hash_file(settings.MEDIA_ROOT + enc_dec_test_file_1)
-        hash_2 = self.hash_file(settings.MEDIA_ROOT + enc_dec_test_file_2)
-        # compare hashes
-        self.assertTrue(hash_1 == hash_2)
-        # remove encrypted files
-        os.remove(settings.MEDIA_ROOT + enc_dec_test_file_1 + '.enc')
-        os.remove(settings.MEDIA_ROOT + enc_dec_test_file_2 + '.enc')
-        # test encryption with files having different content
-        with open(file_name_2, 'a') as file:
-            file.write('this make file 2 different\n')
-        # encrypt/decrypt test file 1
-        enc_dec_test_file_1 = self.scheme.decrypt_file(
-            settings.MEDIA_ROOT + self.scheme.encrypt_file(file_name_1, shares), shares)
-        # encrypt/decrypt test file 2
-        enc_dec_test_file_2 = self.scheme.decrypt_file(
-            settings.MEDIA_ROOT + self.scheme.encrypt_file(file_name_2, shares), shares)
-        # create hashes of the two files
-        hash_1 = self.hash_file(settings.MEDIA_ROOT + enc_dec_test_file_1)
-        hash_2 = self.hash_file(settings.MEDIA_ROOT + enc_dec_test_file_2)
-        # compare hashes
-        self.assertTrue(hash_1 != hash_2)
-        # remove test files
-        os.remove(settings.MEDIA_ROOT + enc_dec_test_file_1 + '.enc')
-        os.remove(settings.MEDIA_ROOT + enc_dec_test_file_2 + '.enc')
-        os.remove(settings.MEDIA_ROOT + enc_dec_test_file_1)
-        os.remove(settings.MEDIA_ROOT + enc_dec_test_file_2)
+@pytest.mark.parametrize('secret', ['1', '1' * 40, '1' * 32])
+def test_get_key_is_always_32_bytes(secret):
+    scheme = ShamirSSFactory()
+    assert len(base64.b64decode(scheme.get_key(secret))) == 32
 
-    def hash_file(self, file):
-        """ return sha1 hash of a file """
-        blocksize = 65536
-        hasher = hashlib.sha1()
-        with open(file, 'rb') as afile:
-            buf = afile.read(blocksize)
-            while len(buf) > 0:
-                hasher.update(buf)
-                buf = afile.read(blocksize)
-        return hasher.hexdigest()
 
-    def _pick_k_random_values(self, l, k):
-        """ select k distinct random values from l """
-        s = set()
-        while len(s) != k:
-            s.add(random.choice(l))
-        return list(s)
+def test_shares_generation_and_secret_recovery():
+    scheme = ShamirSSFactory(mers_exp=107, k=4, n=18)
+    shares = scheme.get_shares()
+    assert len(shares) == scheme.n
+
+    # any k shares recover the stored secret
+    rec = scheme.get_secret(scheme.decode_shares(_pick(shares, scheme.k)))
+    assert hashers.check_password(str(rec), scheme.secret)
+
+    # all n shares recover it too
+    rec_all = scheme.get_secret(scheme.decode_shares(shares))
+    assert hashers.check_password(str(rec_all), scheme.secret)
+
+
+def test_get_secret_requires_k_shares():
+    scheme = ShamirSSFactory(k=4, n=18)
+    shares = scheme.get_shares()
+    too_few = scheme.decode_shares(_pick(shares, scheme.k - 1))
+    with pytest.raises(ValueError):
+        scheme.get_secret(too_few)
+
+
+def test_wrong_shares_do_not_recover_secret():
+    scheme = ShamirSSFactory(k=4, n=18)
+    shares = scheme.get_shares()
+    picked = _pick(shares, scheme.k)
+    # corrupt one share's value
+    picked[0] = (picked[0][0], picked[1][1])
+    wrong = scheme.get_secret(scheme.decode_shares(picked))
+    assert not hashers.check_password(str(wrong), scheme.secret)
+
+
+def test_generate_shares_irrecoverable_pool():
+    scheme = ShamirSSFactory(k=5, n=3)   # k > n
+    with pytest.raises(ValueError):
+        scheme.get_shares()
+
+
+def test_recover_secret_needs_two_shares():
+    scheme = ShamirSSFactory()
+    prime = (2 ** scheme.mers_exp) - 1
+    with pytest.raises(ValueError):
+        scheme._recover_secret([(1, 5)], prime)
+
+
+def test_validate_shares():
+    scheme = ShamirSSFactory(k=2, n=3)
+    shares = scheme.get_shares()   # already base64-encoded shares
+    scheme.save()
+    assert scheme.validate_shares(_pick(shares, scheme.k)) is True
+    # not a list -> ValueError
+    with pytest.raises(ValueError):
+        scheme.validate_shares('not-a-list')
+    # malformed shares -> caught, returns False
+    assert scheme.validate_shares([(1, 'not-base64!!')]) is False
+
+
+def _make_file(name, content=b'content to encrypt\n'):
+    path = settings.MEDIA_ROOT + name
+    with open(path, 'wb') as fh:
+        fh.write(content)
+    return path
+
+
+def test_encrypt_decrypt_file_roundtrip():
+    scheme = ShamirSSFactory(k=2, n=3)
+    shares = scheme.get_shares()
+    original = b'top secret payload\n'
+    path = _make_file('secret.txt', original)
+
+    enc_rel = scheme.encrypt_file(path, shares)
+    assert enc_rel.endswith('.enc')
+    assert os.path.isfile(settings.MEDIA_ROOT + enc_rel)
+
+    dec_rel = scheme.decrypt_file(settings.MEDIA_ROOT + enc_rel, shares)
+    with open(settings.MEDIA_ROOT + dec_rel, 'rb') as fh:
+        assert fh.read() == original
+
+
+def test_encrypt_decrypt_missing_file_returns_none():
+    scheme = ShamirSSFactory()
+    shares = scheme.get_shares()
+    assert scheme.encrypt_file(settings.MEDIA_ROOT + 'nope.txt', shares) is None
+    assert scheme.decrypt_file(settings.MEDIA_ROOT + 'nope.enc', shares) is None

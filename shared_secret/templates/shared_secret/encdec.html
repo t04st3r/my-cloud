@@ -19,13 +19,50 @@
         {% endif %}
     </div>
     <div class="card-body">
-        <form method="post">
+        <form method="post" autocomplete="off">
             {% csrf_token %}
-            {{ form.as_p }}
+            {{ form.non_field_errors }}
+
             {% if enc %}
-                <button class="btn btn-primary" type="submit"><i class="fas fa-lock"></i> Encrypt</button>
+            <div class="form-group">
+                {{ form.scheme.label_tag }}
+                {{ form.scheme }}
+            </div>
             {% else %}
-                <button class="btn btn-primary" type="submit"><i class="fas fa-lock-open"></i> Decrypt</button>
+                {{ form.scheme }}
+            {% endif %}
+
+            {# Plain share fields: the no-JS fallback, hidden by JS in favour of the dynamic UI below #}
+            <div id="share-store">
+                {% for f in form.share_fields %}
+                <div class="form-group">
+                    {{ f.label_tag }}
+                    {{ f }}
+                </div>
+                {% endfor %}
+            </div>
+
+            {# Progressive dynamic share entry, revealed by JS #}
+            <div id="share-ui" style="display:none">
+                <label>Shares</label>
+                <div id="share-rows"></div>
+                <button type="button" id="add-share" class="btn btn-secondary mb-3">
+                    <i class="far fa-plus-square"></i> Add share
+                </button>
+            </div>
+
+            <div class="mb-3">
+                <div class="progress" style="height: 20px;">
+                    <div id="shares-progress-bar" class="progress-bar bg-warning" role="progressbar"
+                         style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="{{ scheme.k }}"></div>
+                </div>
+                <small id="shares-count" class="form-text text-muted">0 of {{ scheme.k }} required shares entered</small>
+            </div>
+
+            {% if enc %}
+                <button id="enc-dec-submit" class="btn btn-primary" type="submit"><i class="fas fa-lock"></i> Encrypt</button>
+            {% else %}
+                <button id="enc-dec-submit" class="btn btn-primary" type="submit"><i class="fas fa-lock-open"></i> Decrypt</button>
             {% endif %}
             <a class="btn btn-primary" href="/folder/{{ document.folder_id }}"><i class="fas fa-arrow-circle-left"></i> Back to {{ document.folder.name }}</a>
         </form>
@@ -43,6 +80,135 @@
         var pathname = splitted_path.join('/')
         location.pathname = pathname
     })
+
+    // Progressive share entry: dynamic rows (pick share number + value) that
+    // feed the hidden share_* fields, with live "k of n" progress + submit gating.
+    ;(function(){
+        var required = {{ scheme.k }}
+        var total = {{ scheme.n }}
+        var $store = $('#share-store')
+        var $ui = $('#share-ui')
+        var $rows = $('#share-rows')
+        var $addBtn = $('#add-share')
+        var $btn = $('#enc-dec-submit')
+        var $count = $('#shares-count')
+        var $bar = $('#shares-progress-bar')
+
+        function optionsHtml(selected){
+            var html = ''
+            for (var i = 1; i <= total; i++){
+                html += '<option value="' + i + '"' +
+                        (String(i) === String(selected) ? ' selected' : '') +
+                        '>Share #' + i + '</option>'
+            }
+            return html
+        }
+
+        function usedNumbers(exceptRow){
+            var used = {}
+            $rows.find('.share-row').each(function(){
+                if (this === exceptRow) return
+                var v = $(this).find('.share-num').val()
+                if (v) used[v] = true
+            })
+            return used
+        }
+
+        function refreshOptions(){
+            $rows.find('.share-row').each(function(){
+                var $sel = $(this).find('.share-num')
+                var current = $sel.val()
+                var used = usedNumbers(this)
+                $sel.find('option').each(function(){
+                    var val = $(this).attr('value')
+                    $(this).prop('disabled', !!used[val] && val !== current)
+                })
+            })
+            $addBtn.prop('disabled', $rows.find('.share-row').length >= total)
+        }
+
+        function sync(){
+            $store.find('input').val('')
+            $rows.find('.share-row').each(function(){
+                var num = $(this).find('.share-num').val()
+                var val = $(this).find('.share-value').val()
+                if (num && $.trim(val).length > 0){
+                    $store.find('input[name="share_' + num + '"]').val(val)
+                }
+            })
+            var filled = $store.find('input').filter(function(){
+                return $.trim(this.value).length > 0
+            }).length
+            var pct = Math.min(100, Math.round(filled / required * 100))
+            $count.text(filled + ' of ' + required + ' required shares entered')
+            $bar.css('width', pct + '%').attr('aria-valuenow', filled)
+            var ready = filled >= required
+            $btn.prop('disabled', !ready)
+            $bar.toggleClass('bg-success', ready).toggleClass('bg-warning', !ready)
+            refreshOptions()
+        }
+
+        function firstUnusedNumber(){
+            var used = usedNumbers(null)
+            for (var i = 1; i <= total; i++){
+                if (!used[String(i)]) return i
+            }
+            return null
+        }
+
+        function addRow(num, val){
+            if ($rows.find('.share-row').length >= total) return
+            if (num == null) num = firstUnusedNumber()
+            var $row = $(
+                '<div class="form-row share-row align-items-center mb-2">' +
+                    '<div class="col-auto">' +
+                        '<select class="form-control share-num">' + optionsHtml(num) + '</select>' +
+                    '</div>' +
+                    '<div class="col">' +
+                        '<input type="text" class="form-control share-value masked-share" ' +
+                               'autocomplete="off" placeholder="Share value">' +
+                    '</div>' +
+                    '<div class="col-auto">' +
+                        '<button type="button" class="btn btn-outline-danger remove-share" title="Remove">' +
+                            '<i class="far fa-trash-alt"></i>' +
+                        '</button>' +
+                    '</div>' +
+                '</div>'
+            )
+            if (val != null) $row.find('.share-value').val(val)
+            $rows.append($row)
+        }
+
+        $addBtn.on('click', function(){ addRow(); sync() })
+        $rows.on('input', '.share-value', sync)
+        $rows.on('change', '.share-num', sync)
+        $rows.on('click', '.remove-share', function(){
+            var $r = $(this).closest('.share-row')
+            if ($rows.find('.share-row').length > 1){
+                $r.remove()
+            } else {
+                $r.find('.share-value').val('')
+            }
+            sync()
+        })
+
+        // Reveal the dynamic UI, hide the plain fallback fields.
+        $store.hide()
+        $ui.show()
+
+        // Rebuild rows from any values already present (e.g. after a failed submit).
+        var seeded = false
+        $store.find('input').each(function(){
+            var name = $(this).attr('name')           // share_<n>
+            var num = name.substring(name.indexOf('_') + 1)
+            if ($.trim(this.value).length > 0){
+                addRow(num, this.value)
+                seeded = true
+            }
+        })
+        if (!seeded) addRow()   // first empty row present by default
+        sync()
+    })()
 
 </script>
 

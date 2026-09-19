@@ -1,147 +1,142 @@
-from django.test import TestCase
-from django.contrib.auth.models import User
-from django.test import Client
-from file_handler.models import Folder
-from file_handler.models import Document
-from random import randint
-from django.core.files import File
-from django.conf import settings
-from django.core.exceptions import ObjectDoesNotExist
 import os
 
+import pytest
+from django.core.files.uploadedfile import SimpleUploadedFile
 
-class TestFileHandlerViews(TestCase):
-    """ Test for file_handler app views """
+from file_handler.models import Document, Folder
+from tests.factories import DocumentFactory, FolderFactory
 
-    DUMMY_USERNAME = 'dummy'
-    DUMMY_PASSWORD = 'dummy_secret'
-    DUMMY_EMAIL = 'dummy@dummy.com'
+pytestmark = pytest.mark.django_db
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        # create a test user
-        User.objects.create_user(cls.DUMMY_USERNAME, cls.DUMMY_EMAIL, cls.DUMMY_PASSWORD)
-        # Create a root folder
-        cls.root = Folder.objects.create(name='root', parent=None)
-        # create a list of test files, each file is a tuple (filename, file object)
-        cls.files = [("test_{}.txt".format(idx), open("test_{}.txt".format(idx), 'w+')) for idx in range(1, 7)]
-        for file in cls.files:
-            file[1].write('something to fill this up\n')
-            file[1].seek(0)
 
-    def setUp(self):
-        self.client = Client()
-        self.client.login(username=self.DUMMY_USERNAME, password=self.DUMMY_PASSWORD, enforce_csrf_checks=True)
+def test_index_lists_root_folders(auth_client):
+    FolderFactory()
+    resp = auth_client.get('/')
+    assert resp.status_code == 200
+    assert len(resp.context['root_folders']) == 1
+    FolderFactory()
+    resp = auth_client.get('/')
+    assert len(resp.context['root_folders']) == 2
 
-    def test_index(self):
-        """ Test for index view """
-        response = self.client.get('/')
-        self.assertEqual(len(response.context['root_folders']), 1)
-        Folder.objects.create(name='root2', parent=None)
-        response = self.client.get('/')
-        self.assertEqual(len(response.context['root_folders']), 2)
 
-    def test_upload(self):
-        """ Test for the upload view """
-        upload_url = '/upload/' + str(self.root.id) + '/'
-        expected_url = '/folder/' + str(self.root.id) + '/'
-        response = self.client.post(upload_url, {'name': self.files[1][0],
-                                                 'folder': self.root.id,
-                                                 'file': self.files[1][1]}, follow=True)
-        self.assertRedirects(response, expected_url=expected_url, status_code=302, target_status_code=200)
-        root_docs = Document.objects.filter(folder=self.root)
-        names = []
-        for doc in root_docs:
-            names.append(doc.name)
-        self.assertIn(self.files[1][0], names)
-        # remove file from filesystem
-        uploaded_document = Document.objects.get(name=self.files[1][0])
-        self.remove_file(uploaded_document.file.name)
+def test_index_requires_login(client):
+    resp = client.get('/')
+    assert resp.status_code == 302
+    assert '/login/' in resp['Location']
 
-    def test_folder(self):
-        """ Test for folder view """
-        response_1 = self.client.get('/folder/' + str(self.root.id) + '/')
-        self.assertEqual(response_1.context['root'], self.root)
-        root_child = Folder.objects.create(name='root_child', parent=self.root)
-        document = Document.objects.create(name=self.files[0][0], folder=self.root, file=File(self.files[0][1]))
-        response_2 = self.client.get('/folder/' + str(self.root.id) + '/')
-        self.assertIn(document, response_2.context['documents'])
-        self.assertIn(root_child, response_2.context['children'])
-        response_404 = self.client.get('/folder/' + str(randint(-10, -1)) + '/')
-        self.assertEqual(response_404.status_code, 404)
-        # remove file from filesystem
-        self.remove_file(document.file.name)
 
-    def test_download(self):
-        """ Test for download view """
-        document = Document.objects.create(name=self.files[2][0], folder=self.root, file=File(self.files[2][1]))
-        response = self.client.get('/download/' + str(document.id) + '/')
-        self.assertEqual(response.status_code, 200)
-        self.assertEquals(response.get('Content-Disposition'),
-                          "attachment; filename=" + self.files[2][0])
-        # remove file from filesystem
-        self.remove_file(document.file.name)
+def test_upload_get_renders_form(auth_client):
+    folder = FolderFactory()
+    resp = auth_client.get('/upload/%d/' % folder.id)
+    assert resp.status_code == 200
+    assert 'form' in resp.context
 
-    def test_create(self):
-        """ Test for create (folder) view """
-        create_url = '/create'
-        expected_url = '/folder/' + str(self.root.id) + '/'
-        response_1 = self.client.post(create_url, {'name': 'test_folder', 'parent': self.root.id}, follow=True)
-        self.assertRedirects(response_1, expected_url=expected_url, status_code=302, target_status_code=200)
-        test_folder = Folder.objects.get(name='test_folder')
-        self.assertEqual(test_folder.parent, self.root)
-        response_2 = self.client.get('/folder/' + str(test_folder.id) + '/')
-        self.assertEqual(test_folder, response_2.context['root'])
-        create_url_2 = '/create/' + str(test_folder.id) + '/'
-        expected_url_2 = '/folder/' + str(test_folder.id) + '/'
-        response_3 = self.client.post(create_url_2, {'name': 'test_folder_child', 'parent': test_folder.id}, follow=True)
-        self.assertRedirects(response_3, expected_url=expected_url_2, status_code=302, target_status_code=200)
 
-    def test_delete_doc(self):
-        """ Test for delete_doc view """
-        folder = Folder.objects.create(name="another folder", parent=self.root)
-        doc_to_delete = Document.objects.create(name=self.files[3][0], folder=folder, file=File(self.files[3][1]))
-        delete_url = '/delete_doc/' + str(doc_to_delete.id) + "/"
-        expected_url = '/folder/' + str(folder.id) + '/'
-        response = self.client.post(delete_url, follow=True)
-        self.assertRedirects(response, expected_url=expected_url, status_code=302, target_status_code=200)
-        self.assertFalse(os.path.isfile(doc_to_delete.file_path()))
-        self.assertRaises(ObjectDoesNotExist, lambda: Document.objects.get(pk=doc_to_delete.id))
+def test_upload_multiple_files(auth_client):
+    folder = FolderFactory()
+    f1 = SimpleUploadedFile('a.txt', b'aaa', content_type='text/plain')
+    f2 = SimpleUploadedFile('b.txt', b'bbb', content_type='text/plain')
+    resp = auth_client.post('/upload/%d/' % folder.id,
+                            {'folder': folder.id, 'file': [f1, f2]}, follow=True)
+    assert resp.redirect_chain[-1][0] == '/folder/%d/' % folder.id
+    docs = Document.objects.filter(folder=folder)
+    assert docs.count() == 2
+    # name is auto-derived from the stored file name
+    for doc in docs:
+        assert doc.name == doc.filename()
 
-    def test_delete(self):
-        """ Test for (folder) delete view """
-        parent_folder = Folder.objects.create(name="parent", parent=None)
-        parent_doc = Document.objects.create(name=self.files[4][0], folder=parent_folder, file=File(self.files[4][1]))
-        child_folder = Folder.objects.create(name="child", parent=parent_folder)
-        child_doc = Document.objects.create(name=self.files[5][0], folder=child_folder, file=File(self.files[5][1]))
-        delete_url = '/delete/' + str(child_folder.id) + "/"
-        expected_url = '/folder/' + str(parent_folder.id) + '/'
-        response_1 = self.client.post(delete_url, follow=True)
-        self.assertRedirects(response_1, expected_url=expected_url, status_code=302, target_status_code=200)
-        self.assertRaises(ObjectDoesNotExist, lambda: Folder.objects.get(pk=child_folder.id))
-        self.assertFalse(os.path.isfile(child_doc.file_path()))
-        self.assertRaises(ObjectDoesNotExist, lambda: Document.objects.get(pk=child_doc.id))
-        delete_url = '/delete/' + str(parent_folder.id) + "/"
-        expected_url = '/'
-        response_2 = self.client.post(delete_url, follow=True)
-        self.assertRedirects(response_2, expected_url=expected_url, status_code=302, target_status_code=200)
-        self.assertRaises(ObjectDoesNotExist, lambda: Folder.objects.get(pk=parent_folder.id))
-        self.assertFalse(os.path.isfile(parent_doc.file_path()))
-        self.assertRaises(ObjectDoesNotExist, lambda: Document.objects.get(pk=parent_doc.id))
 
-    @classmethod
-    def tearDownClass(cls):
-        # remove test files
-        for file in cls.files:
-            file[1].close()
-            os.remove(file[0])
-        super().tearDownClass()
+def test_upload_invalid_without_file(auth_client):
+    folder = FolderFactory()
+    resp = auth_client.post('/upload/%d/' % folder.id, {'folder': folder.id})
+    assert resp.status_code == 200                       # re-renders with errors
+    assert Document.objects.filter(folder=folder).count() == 0
 
-    @classmethod
-    def remove_file(cls, path):
-        """ helper to remove a file from media folder given its path """
-        absolute_path = settings.MEDIA_ROOT + path
-        if os.path.isfile(absolute_path):
-            os.remove(absolute_path)
 
+def test_folder_view(auth_client):
+    folder = FolderFactory()
+    child = FolderFactory(parent=folder)
+    document = DocumentFactory(folder=folder)
+    resp = auth_client.get('/folder/%d/' % folder.id)
+    assert resp.status_code == 200
+    assert resp.context['root'] == folder
+    assert document in resp.context['documents']
+    assert child in resp.context['children']
+
+
+def test_folder_view_404(auth_client):
+    assert auth_client.get('/folder/999999/').status_code == 404
+
+
+def test_download(auth_client):
+    document = DocumentFactory()
+    resp = auth_client.get('/download/%d/' % document.id)
+    assert resp.status_code == 200
+    assert resp['Content-Disposition'] == 'attachment; filename=' + document.filename()
+
+
+def test_create_root_folder(auth_client):
+    resp = auth_client.post('/create', {'name': 'top'}, follow=True)
+    assert resp.redirect_chain[-1][0] == '/'
+    assert Folder.objects.filter(name='top', parent__isnull=True).exists()
+
+
+def test_create_nested_folder(auth_client):
+    parent = FolderFactory()
+    resp = auth_client.post('/create/%d/' % parent.id,
+                            {'name': 'child', 'parent': parent.id}, follow=True)
+    assert resp.redirect_chain[-1][0] == '/folder/%d/' % parent.id
+    child = Folder.objects.get(name='child')
+    assert child.parent == parent
+
+
+def test_create_invalid_folder(auth_client):
+    # missing name -> form invalid -> nothing saved, redirected home
+    resp = auth_client.post('/create', {}, follow=True)
+    assert resp.redirect_chain[-1][0] == '/'
+    assert not Folder.objects.exists()
+
+
+def test_create_get_renders(auth_client):
+    parent = FolderFactory()
+    resp = auth_client.get('/create/%d/' % parent.id)
+    assert resp.status_code == 200
+    assert resp.context['parent'] == parent
+
+
+def test_delete_doc(auth_client):
+    document = DocumentFactory()
+    path = document.file_path()
+    assert os.path.isfile(path)
+    resp = auth_client.post('/delete_doc/%d/' % document.id, follow=True)
+    assert resp.redirect_chain[-1][0] == '/folder/%d/' % document.folder.id
+    assert not Document.objects.filter(pk=document.id).exists()
+    assert not os.path.isfile(path)          # file removed by post_delete signal
+
+
+def test_delete_doc_get_not_allowed(auth_client):
+    document = DocumentFactory()
+    assert auth_client.get('/delete_doc/%d/' % document.id).status_code == 405
+
+
+def test_delete_folder_cascade(auth_client):
+    parent = FolderFactory()
+    child = FolderFactory(parent=parent)
+    doc = DocumentFactory(folder=child)
+    path = doc.file_path()
+    resp = auth_client.post('/delete/%d/' % child.id, follow=True)
+    assert resp.redirect_chain[-1][0] == '/folder/%d/' % parent.id
+    assert not Folder.objects.filter(pk=child.id).exists()
+    assert not os.path.isfile(path)
+
+
+def test_delete_root_folder_redirects_home(auth_client):
+    folder = FolderFactory()
+    resp = auth_client.post('/delete/%d/' % folder.id, follow=True)
+    assert resp.redirect_chain[-1][0] == '/'
+    assert not Folder.objects.filter(pk=folder.id).exists()
+
+
+def test_delete_folder_get_not_allowed(auth_client):
+    folder = FolderFactory()
+    assert auth_client.get('/delete/%d/' % folder.id).status_code == 405

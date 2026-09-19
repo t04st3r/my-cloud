@@ -1,0 +1,55 @@
+[project]
+name = "my-cloud"
+version = "1.0.0"
+description = "Django webapp to store files and encrypt/decrypt them using Shamir's Secret Sharing scheme."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "django>=5.2.17,<5.3",
+    "djangorestframework>=3.18.1",
+    "django-oauth-toolkit>=3.4.1",
+    "django-mptt>=0.18.0",
+    "django-environ>=0.14.0",
+    "psycopg[binary]>=3.3.6",
+    "gunicorn>=26.2.0",
+    "python-magic>=0.4.27",
+    "cryptography>=50.0.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-django>=4.11.1",
+    "pytest-xdist>=3.8.0",
+    "pytest-cov>=7.0.0",
+    "factory-boy>=3.3.3",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "my_cloud.settings"
+python_files = ["test_*.py"]
+testpaths = ["shared_secret", "file_handler", "api"]
+addopts = "-v -n auto --cov --cov-report=term-missing --cov-report=html"
+
+[tool.coverage.run]
+branch = true
+source = ["shared_secret", "file_handler", "api", "my_cloud"]
+omit = [
+    "*/migrations/*",
+    "*/tests/*",
+    "*/__init__.py",
+    "*/urls.py",
+    "my_cloud/settings.py",
+    "my_cloud/wsgi.py",
+    "manage.py",
+    "*/apps.py",
+    "*/admin.py",
+    "conftest.py",
+    "tests/*",
+]
+
+[tool.coverage.report]
+show_missing = true
