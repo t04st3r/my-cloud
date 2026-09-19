@@ -3,6 +3,7 @@ import os
 
 import django.contrib.auth.hashers as hashers
 import pytest
+from cryptography.fernet import Fernet
 from django.conf import settings
 
 from shared_secret.models import ShamirSS
@@ -29,10 +30,19 @@ def test_encode_decode_roundtrip():
     assert decoded[0] == (1, value)
 
 
-@pytest.mark.parametrize('secret', ['1', '1' * 40, '1' * 32])
-def test_get_key_is_always_32_bytes(secret):
+@pytest.mark.parametrize('secret', [1, 12345, 2 ** 127 - 1])
+def test_get_key_is_a_valid_fernet_key(secret):
     scheme = ShamirSSFactory()
-    assert len(base64.b64decode(scheme.get_key(secret))) == 32
+    key = scheme.get_key(secret)
+    # 32 uniform bytes (SHA-256 digest), url-safe base64 encoded
+    assert len(base64.urlsafe_b64decode(key)) == 32
+    Fernet(key)                      # raises if the key is not a valid Fernet key
+    assert scheme.get_key(secret) == key   # deterministic
+
+
+def test_get_key_differs_per_secret():
+    scheme = ShamirSSFactory()
+    assert scheme.get_key(1) != scheme.get_key(2)
 
 
 def test_shares_generation_and_secret_recovery():
