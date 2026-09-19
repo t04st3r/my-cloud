@@ -1,11 +1,11 @@
 from django.db.models.signals import post_delete
-from .models import Document
 from django.dispatch import receiver
-import os
+
+from .models import Document
 
 
 @receiver(post_delete, sender=Document)
 def delete_file(instance, **kwargs):
-    """ delete file physically after removal from db """
-    file_name = instance.file_path()
-    os.remove(file_name)
+    """ delete the underlying file from storage after the document row is removed """
+    # FieldFile.delete() is a safe no-op when there is no associated file.
+    instance.file.delete(save=False)

@@ -1,0 +1,67 @@
+name: CI / Deploy
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  # ---- Gate: tests must pass and coverage stay >= 98% --------------------------
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+      SECRET_KEY: ci-test-secret
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install libmagic (python-magic runtime dep)
+        run: sudo apt-get update && sudo apt-get install -y libmagic1
+      - name: Install uv (and Python 3.14)
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.14"
+      - name: Install dependencies
+        run: uv sync
+      - name: Run tests with coverage gate
+        run: uv run pytest -n auto --cov --cov-fail-under=98
+
+  # ---- Build image, push to DOCR, deploy to App Platform (master only) ---------
+  build-deploy:
+    needs: test
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY: registry.digitalocean.com/rtosti
+      IMAGE: my-cloud
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install doctl
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      - name: Log in to DOCR
+        run: doctl registry login --expiry-seconds 1200
+      - name: Build and push image
+        run: |
+          docker build -t "$REGISTRY/$IMAGE:${{ github.sha }}" -t "$REGISTRY/$IMAGE:latest" .
+          docker push "$REGISTRY/$IMAGE:${{ github.sha }}"
+          docker push "$REGISTRY/$IMAGE:latest"
+      - name: Deploy to App Platform (swap image on the existing app)
+        uses: digitalocean/app_action/deploy@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          app_name: my-cloud
+          images: >-
+            [{"name": "web", "image": {"registry_type": "DOCR", "repository": "my-cloud", "tag": "${{ github.sha }}"}}]

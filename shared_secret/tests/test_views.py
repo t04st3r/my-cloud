@@ -237,7 +237,7 @@ def test_decrypt_flow(auth_client, user):
     scheme.save()
     doc = DocumentFactory(owner=user)
     # encrypt it first
-    enc = scheme.encrypt_file(doc.file_path(), shares)
+    enc = scheme.encrypt_file(doc.file.name, shares)
     os.remove(doc.file_path())
     doc.file.name = enc
     doc.scheme = scheme

@@ -1,7 +1,7 @@
 from django import forms
+from django.core.files.storage import default_storage
 from django.utils.html import format_html, format_html_join
 from shared_secret.models import ShamirSS
-import os
 
 
 class EncryptDecryptForm(forms.Form):
@@ -56,12 +56,13 @@ class EncryptDecryptForm(forms.Form):
             self.add_error(None, 'Document already encrypted')
             return False
         scheme, shares = self.get_shares()
-        enc_file_path = scheme.encrypt_file(document.file_path(), shares)
-        if enc_file_path is None:
+        old_name = document.file.name
+        enc_name = scheme.encrypt_file(old_name, shares)
+        if enc_name is None:
             self.add_error(None, 'Encryption error')
             return False
-        os.remove(document.file_path())
-        document.file.name = enc_file_path
+        default_storage.delete(old_name)
+        document.file.name = enc_name
         document.scheme = scheme
         document.save()
         return True
@@ -69,11 +70,12 @@ class EncryptDecryptForm(forms.Form):
     def decrypt(self, document):
         """ decrypt the document file and update its model, return True if everything goes smooth """
         scheme, shares = self.get_shares()
-        dec_file_path = scheme.decrypt_file(document.file_path(), shares)
-        if dec_file_path is None:
+        old_name = document.file.name
+        dec_name = scheme.decrypt_file(old_name, shares)
+        if dec_name is None:
             return False
-        os.remove(document.file_path())
-        document.file.name = dec_file_path
+        default_storage.delete(old_name)
+        document.file.name = dec_name
         document.scheme = None
         document.save()
         return True

@@ -61,6 +61,7 @@ SITE_ID = 1
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -139,8 +140,53 @@ USE_TZ = True
 STATIC_URL = "/static/"
 # Source assets served directly by runserver in development (finders look here).
 STATICFILES_DIRS = [BASE_DIR / "static"]
-# Destination for `collectstatic` (served by nginx in the production stack).
+# Destination for `collectstatic` (served by WhiteNoise in production).
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# ---- Storage backends ---------------------------------------------------------
+# Static files are always served/compressed by WhiteNoise. Media (uploads) live on
+# the local filesystem in development and in DigitalOcean Spaces in production
+# (App Platform disks are ephemeral). The application talks only to Django's
+# storage API, so the same code works with either backend.
+USE_SPACES = env.bool("USE_SPACES", default=False)
+
+if USE_SPACES:
+    _default_storage = {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "access_key": env("SPACES_ACCESS_KEY", default=""),
+            "secret_key": env("SPACES_SECRET_KEY", default=""),
+            "bucket_name": env("SPACES_BUCKET", default=""),
+            "region_name": env("SPACES_REGION", default=""),
+            "endpoint_url": env("SPACES_ENDPOINT", default=""),
+            "default_acl": "private",
+            "querystring_auth": True,   # serve uploads via signed URLs
+            "file_overwrite": False,
+        },
+    }
+else:
+    _default_storage = {"BACKEND": "django.core.files.storage.FileSystemStorage"}
+
+STORAGES = {
+    "default": _default_storage,
+    # Non-manifest WhiteNoise storage: compressed and served by WhiteNoise, but
+    # without hashed names / a manifest, so {% static %} works without a prior
+    # collectstatic (dev, tests, and prod alike).
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
+
+# ---- Production security (behind the App Platform TLS-terminating proxy) -------
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+
+if not DEBUG:
+    # App Platform terminates TLS and redirects HTTP->HTTPS at its edge, and its
+    # internal health probe speaks plain HTTP — so Django's own redirect is off by
+    # default (turning it on would 301 the probe). Cookies stay secure because
+    # SECURE_PROXY_SSL_HEADER marks real (proxied) traffic as secure.
+    SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
@@ -155,6 +201,24 @@ REST_FRAMEWORK = {
 
 OAUTH2_PROVIDER = {
     "SCOPES": {"read": "Read scope", "write": "Write scope"},
+}
+
+# Log to stdout so tracebacks are visible in the platform log stream (Django's
+# default console handler is gated on DEBUG=True and would stay silent in prod).
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {"class": "logging.StreamHandler"},
+    },
+    "root": {"handlers": ["console"], "level": "INFO"},
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+    },
 }
 
 AUTHENTICATION_BACKENDS = [

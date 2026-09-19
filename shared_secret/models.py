@@ -4,9 +4,10 @@ import base64
 import hashlib
 from django.db import models
 from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 import django.contrib.auth.hashers as hashers
 from cryptography.fernet import Fernet
-from pathlib import Path
 
 
 class ShamirSS(models.Model):
@@ -97,41 +98,28 @@ class ShamirSS(models.Model):
             ret_list.append((share[0], int(b_share.decode('utf-8'))))
         return ret_list
 
-    def encrypt_file(self, file_path, shares):
-        """ encrypt a file using secret as key, return encrypted file path or None if file doesn't exists """
-        check_file = Path(file_path)
-        if check_file.is_file():
-            output_file = file_path + '.enc'
-            secret = self.get_secret(self.decode_shares(shares))
-            key = self.get_key(secret)
-            with open(file_path, 'rb') as f:
-                data = f.read()
-            fernet = Fernet(key)
-            encrypted = fernet.encrypt(data)
-            with open(output_file, 'wb') as f:
-                f.write(encrypted)
-            # return relative path to MEDIA path
-            remove_len = len(settings.MEDIA_ROOT)
-            return output_file[remove_len:]
-        return None
+    def _transform_file(self, name, transform, out_name):
+        """ read the stored file `name`, apply `transform` to its bytes, and save
+        the result as `out_name`; returns the saved storage name, or None if the
+        source file does not exist. Works with any Django storage backend. """
+        if not default_storage.exists(name):
+            return None
+        with default_storage.open(name, 'rb') as f:
+            data = f.read()
+        result = transform(data)
+        if default_storage.exists(out_name):
+            default_storage.delete(out_name)
+        return default_storage.save(out_name, ContentFile(result))
 
-    def decrypt_file(self, file_path, shares):
-        """ decrypt a file using secret as key, return decrypted file path or None if file doesn't exists """
-        check_file = Path(file_path)
-        if check_file.is_file():
-            output_file = file_path[:-4]
-            secret = self.get_secret(self.decode_shares(shares))
-            key = self.get_key(secret)
-            with open(file_path, 'rb') as f:
-                data = f.read()
-            fernet = Fernet(key)
-            encrypted = fernet.decrypt(data)
-            with open(output_file, 'wb') as f:
-                f.write(encrypted)
-            # return relative path to MEDIA path
-            remove_len = len(settings.MEDIA_ROOT)
-            return output_file[remove_len:]
-        return None
+    def encrypt_file(self, name, shares):
+        """ encrypt the stored file `name`, return the encrypted storage name (.enc) or None """
+        key = self.get_key(self.get_secret(self.decode_shares(shares)))
+        return self._transform_file(name, Fernet(key).encrypt, name + '.enc')
+
+    def decrypt_file(self, name, shares):
+        """ decrypt the stored file `name`, return the decrypted storage name or None """
+        key = self.get_key(self.get_secret(self.decode_shares(shares)))
+        return self._transform_file(name, Fernet(key).decrypt, name[:-4])
 
     # https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing#Python_example
 
