@@ -170,11 +170,18 @@
         <p>
             When you create a scheme, My Cloud generates a random secret \(S\) and its \(n\) shares, and
             stores only a salted hash of \(S\) (never the shares). To encrypt a file it derives a
-            symmetric key from \(S\) and encrypts with <a href="https://cryptography.io/en/latest/fernet/">Fernet</a>
-            (AES). To decrypt, you re-enter any \(k\) of your shares; the secret is reconstructed by
+            symmetric key as \(\text{key} = \operatorname{SHA256}(S)\) — a full-entropy 256-bit key —
+            and encrypts with <a href="https://cryptography.io/en/latest/fernet/">Fernet</a>
+            (AES-128). To decrypt, you re-enter any \(k\) of your shares; the secret is reconstructed by
             interpolation, checked against the stored hash, and the key is re-derived on the fly. The
             shares themselves are never stored anywhere — lose more than \(n-k\) of them and the file is
             gone for good.
+        </p>
+        <p>
+            One honest boundary: the <em>secret sharing</em> is information-theoretically secure (any
+            \(k-1\) shares reveal nothing, even to a quantum computer), but the <em>file cipher</em>
+            (AES) is only <em>computationally</em> secure. Hashing the secret with SHA-256 makes that
+            layer a clean AES-128 key so its strength doesn't depend on the secret's decimal length.
         </p>
 
         <hr>

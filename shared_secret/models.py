@@ -1,6 +1,7 @@
 import random
 import functools
 import base64
+import hashlib
 from django.db import models
 from django.conf import settings
 import django.contrib.auth.hashers as hashers
@@ -68,17 +69,15 @@ class ShamirSS(models.Model):
         return self._recover_secret(shares, prime)
 
     def get_key(self, secret):
-        """ return a base64 encoded 32 bytes string of the secret """
-        str_secret = str(secret)
-        while len(str_secret) != 32:
-            if len(str_secret) < 32:
-                # insert 0 padding
-                str_secret += '0'
-            else:
-                # truncate if too long
-                str_secret = str_secret[:32]
-        byte_secret = bytes(str_secret, 'utf-8')
-        return base64.b64encode(byte_secret)
+        """ derive a Fernet key from the secret.
+
+        The secret is hashed with SHA-256 to obtain 32 uniformly distributed
+        bytes, which are url-safe base64 encoded into a valid Fernet key. This
+        gives the AES layer a full-entropy key regardless of the secret's size,
+        unlike a digit-string that would restrict the keyspace and lose entropy.
+        """
+        digest = hashlib.sha256(str(secret).encode('utf-8')).digest()
+        return base64.urlsafe_b64encode(digest)
 
     def encode_shares(self, shares):
         """ encode shares as base 64 bytes string """
