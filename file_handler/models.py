@@ -50,6 +50,13 @@ class Document(models.Model):
         """ Return file name """
         return os.path.basename(self.file.name)
 
+    def full_path(self):
+        """ Return the Linux-like path of the document in the folder tree, e.g. /docs/report.txt """
+        if self.folder is None:
+            return '/' + self.name
+        ancestors = self.folder.get_ancestors(include_self=True)
+        return '/' + '/'.join(a.name for a in ancestors) + '/' + self.name
+
     def file_mime(self):
         """ Return file mime type """
         return magic.from_file(settings.MEDIA_ROOT + self.file.name, mime=True)

@@ -14,10 +14,15 @@
                 </div>
                 <div class="card-body login-card">
                     <form method="post">
+                        {% csrf_token %}
+                        {{ form.non_field_errors }}
+                        {% for field in form %}
                         <div class="form-group">
-                            {% csrf_token %}
-                            {{ form.as_p }}
+                            {{ field.label_tag }}
+                            {{ field }}
+                            {{ field.errors }}
                         </div>
+                        {% endfor %}
                         <button class="btn btn-primary float-right" type="submit">Login</button>
                     </form>
                 </div>

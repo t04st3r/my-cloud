@@ -1,91 +1,74 @@
-from django.test import TestCase
-from file_handler.models import Document, Folder
-from django.core.files import File
-from django.conf import settings
-from django.utils import timezone
 import os
 
+import pytest
 
-class FolderTestCases(TestCase):
-    """ Test for Folder Model """
+from file_handler.models import Document, Folder
+from tests.factories import DocumentFactory, FolderFactory
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        parent = Folder.objects.create(name='parent')
-        Folder.objects.create(name='parent2')
-        Folder.objects.create(name='child', parent=parent)
-
-    def test_root_folders(self):
-        """ Test lists of root folders """
-        parent = Folder.objects.get(name='parent')
-        parent2 = Folder.objects.get(name='parent2')
-        child = Folder.objects.get(name='child')
-        root_folders = Folder.root_folders()
-        self.assertIn(parent, root_folders)
-        self.assertIn(parent2, root_folders)
-        self.assertNotIn(child, root_folders)
-
-    def test_is_empty(self):
-        """ Test is_empty method """
-        parent = Folder.objects.get(name='parent')
-        parent2 = Folder.objects.get(name='parent2')
-        child = Folder.objects.get(name='child')
-        self.assertTrue(child.is_empty())
-        self.assertFalse(parent.is_empty())
-        self.assertTrue(parent2.is_empty())
-        Document.objects.create(name="Test", file=None, folder=parent2)
-        self.assertFalse(parent2.is_empty())
-
-    def test_folder_name(self):
-        """ Test string representation of a folder """
-        parent = Folder.objects.get(name='parent')
-        self.assertEqual(parent.name, str(parent))
+pytestmark = pytest.mark.django_db
 
 
-class DocumentTestCases(TestCase):
-    """ Test for Document model """
+# ---- Folder -------------------------------------------------------------------
 
-    TEST_FILE_NAME = 'test.xml'
-    TEST_FILE_MIME_TYPE = 'text/xml'
+def test_root_folders():
+    parent = FolderFactory()
+    parent2 = FolderFactory()
+    child = FolderFactory(parent=parent)
+    roots = Folder.root_folders()
+    assert parent in roots
+    assert parent2 in roots
+    assert child not in roots
 
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        folder = Folder.objects.create(name='Test Folder')
-        with open(cls.TEST_FILE_NAME, 'w+') as test_file:
-            test_file.write('<?xml version="1.0" encoding="UTF-8" standalone="no" ?>')
-            Document.objects.create(name='Test File', file=File(test_file), folder=folder)
 
-    def test_file_save(self):
-        """ Test successful file save """
-        path = settings.MEDIA_ROOT + 'documents/%Y/%m/%d/'
-        file_path = timezone.now().strftime(path + self.TEST_FILE_NAME)
-        self.assertTrue(os.path.isfile(file_path))
+def test_is_empty():
+    parent = FolderFactory()
+    child = FolderFactory(parent=parent)          # parent is not a leaf
+    empty_leaf = FolderFactory()
+    assert empty_leaf.is_empty() is True
+    assert parent.is_empty() is False             # has a child (not a leaf)
+    DocumentFactory(folder=child)
+    assert child.is_empty() is False              # leaf but has a document
 
-    def test_document_name(self):
-        """ Test string representation of a document """
-        document = Document.objects.get(name='Test File')
-        self.assertEqual(document.name, str(document))
 
-    def test_file_path(self):
-        """ Test file complete path """
-        document = Document.objects.get(name='Test File')
-        self.assertEqual(document.file.path, document.file_path())
+def test_folder_str():
+    folder = FolderFactory(name='documents')
+    assert str(folder) == 'documents'
 
-    def test_filename(self):
-        """ Test document filename """
-        document = Document.objects.get(name='Test File')
-        self.assertEqual(document.filename(), self.TEST_FILE_NAME)
 
-    def test_mime_type(self):
-        """ Test correct file mime type """
-        document = Document.objects.get(name='Test File')
-        self.assertEqual(self.TEST_FILE_MIME_TYPE, document.file_mime())
+# ---- Document -----------------------------------------------------------------
 
-    @classmethod
-    def tearDownClass(cls):
-        document = Document.objects.get(name='Test File')
-        os.remove(cls.TEST_FILE_NAME)
-        os.remove(document.file.path)
-        super().tearDownClass()
+def test_document_str():
+    document = DocumentFactory(name='report.txt')
+    assert str(document) == 'report.txt'
+
+
+def test_file_path_matches_storage_path():
+    document = DocumentFactory()
+    assert document.file_path() == document.file.path
+
+
+def test_file_url():
+    document = DocumentFactory()
+    assert document.file_url() == '/media/' + document.file.name
+
+
+def test_filename():
+    document = DocumentFactory()
+    assert document.filename() == os.path.basename(document.file.name)
+
+
+def test_file_mime():
+    document = DocumentFactory(file__data=b'plain text body\n')
+    assert document.file_mime() == 'text/plain'
+
+
+def test_full_path_nested():
+    root = FolderFactory(name='root')
+    sub = FolderFactory(name='etc', parent=root)
+    document = DocumentFactory(name='conf.txt', folder=sub)
+    assert document.full_path() == '/root/etc/conf.txt'
+
+
+def test_full_path_without_folder():
+    document = DocumentFactory(name='loose.txt', folder=None)
+    assert document.full_path() == '/loose.txt'

@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
 from django.utils.encoding import smart_str
-from file_handler.forms import DocumentForm, FolderForm, DeleteDocumentForm, DeleteFolderForm
+from file_handler.forms import UploadForm, FolderForm, DeleteDocumentForm, DeleteFolderForm
 from .models import Folder, Document
 from shared_secret.models import ShamirSS
 from django.contrib.auth.decorators import login_required
@@ -21,15 +21,22 @@ def index(request):
 
 @login_required
 def upload(request, folder_id):
-    """ upload a file on the specified folder """
+    """ upload one or more files on the specified folder """
     folder = get_object_or_404(Folder, pk=folder_id)
     if request.method == 'POST':
-        form = DocumentForm(request.POST, request.FILES)
+        form = UploadForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
-            return redirect('folder', folder_id=folder_id)
+            target = form.cleaned_data['folder']
+            for uploaded in form.cleaned_data['file']:
+                document = Document(folder=target, file=uploaded)
+                # Persist first so the storage backend resolves a unique file name,
+                # then use that reliable name as the document's display name.
+                document.save()
+                document.name = document.filename()
+                document.save(update_fields=['name'])
+            return redirect('folder', folder_id=target.id)
     else:
-        form = DocumentForm(initial={'folder': folder})
+        form = UploadForm(initial={'folder': folder})
     return render(request, 'file_handler/upload.html', {
         'form': form,
         'folder': folder
@@ -90,7 +97,7 @@ def delete_doc(request, file_id):
     if request.method == 'POST':
         document = get_object_or_404(Document, pk=file_id)
         form = DeleteDocumentForm(request.POST, instance=document)
-        if form.is_valid():
+        if form.is_valid():  # pragma: no branch - empty form is always valid
             folder = document.folder
             document.delete()
         return redirect('folder', folder_id=folder.id)
@@ -104,8 +111,9 @@ def delete(request, folder_id):
         folder = get_object_or_404(Folder, pk=folder_id)
         parent = folder.parent
         form = DeleteFolderForm(request.POST, instance=folder)
-        if form.is_valid():
+        if form.is_valid():  # pragma: no branch - empty form is always valid
             folder.delete()
         if parent is None:
             return redirect('/')
         return redirect('folder', folder_id=parent.id)
+    return HttpResponseNotAllowed(['POST'])

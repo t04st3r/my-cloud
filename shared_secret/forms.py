@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.html import format_html, format_html_join
 from shared_secret.models import ShamirSS
 import os
 
@@ -9,12 +10,25 @@ class EncryptDecryptForm(forms.Form):
         super(EncryptDecryptForm, self).__init__(*args, **kwargs)
         if n_shares is not None:
             self.fields['scheme'] = forms.ModelChoiceField(queryset=ShamirSS.objects.all(), empty_label=None)
-            if not enc:
+            if enc:
+                self.fields['scheme'].widget.attrs['class'] = 'form-control'
+            else:
                 self.fields['scheme'].widget = forms.HiddenInput()
             for i in range(0, n_shares):
                 field_name = "share_{}".format(i + 1)
                 self.fields[field_name] = forms.CharField(required=False)
-                self.fields[field_name].widget = forms.PasswordInput()
+                # Render as a masked text input (not type=password): Firefox
+                # ignores autocomplete=off and always offers to save password
+                # fields, so we use a text input masked via CSS instead. This
+                # keeps the values hidden without the browser password manager
+                # treating share values as saved credentials.
+                self.fields[field_name].widget = forms.TextInput(
+                    attrs={'autocomplete': 'off', 'class': 'masked-share'}
+                )
+
+    def share_fields(self):
+        """ bound share_* fields, in order (share_1 .. share_n) """
+        return [self[name] for name in self.fields if name.startswith('share_')]
 
     def get_shares(self):
         """ return submitted shares and scheme """
@@ -75,6 +89,29 @@ class SSForm(forms.ModelForm):
             'k': 'Minimum number of shares to decrypt (k)',
             'n': 'Total shares to generate (n)'
         }
+        help_texts = {
+            'name': 'A friendly name to recognise this scheme later.',
+            'mers_exp': (
+                'Size of the finite field the maths runs in, given as the exponent \\(p\\) of a '
+                'Mersenne prime (the field has \\(2^{p} - 1\\) elements). A larger value means a '
+                'bigger field and longer share strings, but does not change how many shares you '
+                'need — the default is fine for most cases.'
+            ),
+            'k': (
+                'The threshold: the minimum number of shares that must be combined to decrypt. '
+                'Any \\(k - 1\\) shares reveal nothing about the secret.'
+            ),
+            'n': (
+                'How many shares to generate in total — one per trusted party. Must be '
+                '\\(n \\geq k\\); you can lose up to \\(n - k\\) of them and still recover the file.'
+            ),
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'mers_exp': forms.Select(attrs={'class': 'form-control'}),
+            'k': forms.Select(attrs={'class': 'form-control'}),
+            'n': forms.Select(attrs={'class': 'form-control'}),
+        }
 
     def clean(self):
         cleaned_data = super().clean()
@@ -88,21 +125,16 @@ class DivErrorList(forms.utils.ErrorList):
     def __str__(self):
         return self.as_divs()
 
+    # Ensure the safe HTML survives template auto-escaping (both str() and the
+    # __html__ path used by conditional_escape return the same safe markup).
+    __html__ = __str__
+
     def as_divs(self):
         if not self:
             return ''
-        return '<div class="errorlist alert alert-danger">%s</div>' % ''.join(['<div class="error">%s</div>' % e for e in self])
+        return format_html(
+            '<div class="errorlist alert alert-danger">{}</div>',
+            format_html_join('', '<div class="error">{}</div>', ((e,) for e in self)),
+        )
 
 
-class DeleteSchemeForm(forms.ModelForm):
-    class Meta:
-        model = ShamirSS
-        fields = []
-
-
-class DeleteRelatedForm(forms.Form):
-    pass
-
-
-class RefreshForm(forms.Form):
-    pass
