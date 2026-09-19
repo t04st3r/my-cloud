@@ -1,5 +1,7 @@
 import pytest
+from django.test import RequestFactory
 
+from my_cloud.adapters import GoogleSignupAdapter, NoNewUsersAccountAdapter
 from my_cloud.authentication import CustomAuthentication
 from tests.factories import UserFactory
 
@@ -36,11 +38,25 @@ def test_help_page_is_public(client):
     assert b'Shamir' in resp.content
 
 
-def test_login_page_uses_bootstrap_form(client):
+# ---- Google-only registration (allauth) --------------------------------------
+
+def test_login_page_offers_google(client):
     resp = client.get('/login/')
     assert resp.status_code == 200
-    # BootstrapAuthenticationForm styles its inputs
-    assert 'form-control' in resp.content.decode()
+    html = resp.content.decode()
+    assert '/accounts/google/login' in html      # Google provider login link
+    assert 'Sign in with Google' in html
+
+
+def test_local_signup_is_closed():
+    request = RequestFactory().get('/accounts/signup/')
+    assert NoNewUsersAccountAdapter().is_open_for_signup(request) is False
+
+
+def test_google_signup_is_open():
+    # social signup stays open even though local signup is closed
+    request = RequestFactory().get('/accounts/google/login/')
+    assert GoogleSignupAdapter().is_open_for_signup(request, None) is True
 
 
 # ---- logout view is POST-only in Django 5 ------------------------------------

@@ -106,6 +106,30 @@ $ ./manage.py test
 
 (The `uv run` form still works everywhere — in CI, or if you don't use direnv.)
 
+## Authentication (Google sign-in)
+
+New users are created **only** by signing in with Google (via
+[django-allauth](https://docs.allauth.org/)). Staff/superusers still log in with a
+username/password through the Django admin (`/admin/`), and are created with
+`./manage.py createsuperuser`. There is no local self-registration form.
+
+To enable the "Sign in with Google" button:
+
+1. In the [Google Cloud console](https://console.cloud.google.com/apis/credentials), create an
+   **OAuth 2.0 Client ID** of type *Web application*.
+2. Add the authorized redirect URI(s):
+   - `http://localhost:8000/accounts/google/login/callback/` (local dev)
+   - `https://<your-domain>/accounts/google/login/callback/` (production)
+3. Put the credentials in your `.env`:
+   ```
+   GOOGLE_OAUTH_CLIENT_ID=...
+   GOOGLE_OAUTH_CLIENT_SECRET=...
+   ```
+
+On the first Google sign-in the Django user is created automatically and starts with an empty,
+isolated workspace (each user only sees their own folders, files and schemes). In production, also
+add your domain to `ALLOWED_HOSTS`.
+
 ## Production-like stack (nginx + gunicorn + postgres)
 
 The `docker/` folder contains a full stack served by nginx in front of gunicorn.
