@@ -24,12 +24,16 @@ class MultipleFileField(forms.FileField):
 
 
 class UploadForm(forms.Form):
-    """ Upload one or more files into a folder. """
+    """ Upload one or more files into a folder owned by the user. """
     file = MultipleFileField(label='Files')
     folder = forms.ModelChoiceField(
-        queryset=Folder.objects.all(),
+        queryset=Folder.objects.none(),
         widget=forms.Select(attrs={'class': 'form-control'}),
     )
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['folder'].queryset = Folder.objects.filter(owner=user)
 
 
 class FolderForm(forms.ModelForm):
@@ -40,6 +44,11 @@ class FolderForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'parent': forms.Select(attrs={'class': 'form-control'}),
         }
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        # a folder's parent can only be one of the user's own folders
+        self.fields['parent'].queryset = Folder.objects.filter(owner=user)
 
 
 class DeleteDocumentForm(forms.ModelForm):

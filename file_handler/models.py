@@ -11,6 +11,7 @@ class Folder(MPTTModel):
     name = models.CharField(max_length=200)
     creation_date = models.DateTimeField(default=timezone.now, blank=True)
     parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='folders')
 
     class MPTTMeta:
         order_insertion_by = ['id']
@@ -19,9 +20,9 @@ class Folder(MPTTModel):
         return self.name
 
     @staticmethod
-    def root_folders():
-        """ Return all root folders """
-        return Folder.objects.filter(parent__isnull=True)
+    def root_folders(user):
+        """ Return the root folders owned by the given user """
+        return Folder.objects.filter(parent__isnull=True, owner=user)
 
     def is_empty(self):
         """ Return true if the folder is empty """
@@ -34,6 +35,7 @@ class Document(models.Model):
     creation_date = models.DateTimeField(default=timezone.now, blank=True)
     folder = models.ForeignKey(Folder, on_delete=models.CASCADE, null=True, related_name='documents')
     scheme = models.ForeignKey(ShamirSS, on_delete=models.CASCADE, null=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='documents')
 
     def __str__(self):
         return self.name

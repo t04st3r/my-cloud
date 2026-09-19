@@ -11,6 +11,6 @@ def get_earliest_objects_or_none(klass, *args, **kwargs):
             "or QuerySet, not '%s'." % klass__name
         )
     try:
-        return queryset.filter(*args, *kwargs).earliest('id')
+        return queryset.filter(*args, **kwargs).earliest('id')
     except queryset.model.DoesNotExist:
         return None

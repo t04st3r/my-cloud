@@ -10,7 +10,8 @@ from .forms import SSForm, EncryptDecryptForm, DivErrorList
 @login_required
 def index(request):
     """ list all schemes available, annotated with the number of files each encrypts """
-    schemes = ShamirSS.objects.annotate(doc_count=Count('document')).prefetch_related('document_set__folder')
+    schemes = ShamirSS.objects.filter(owner=request.user).annotate(
+        doc_count=Count('document')).prefetch_related('document_set__folder')
     return render(request, 'shared_secret/index.html', {
         'schemes': schemes,
     })
@@ -22,6 +23,7 @@ def create(request):
     if request.method == 'POST':
         form = SSForm(request.POST, error_class=DivErrorList)
         if form.is_valid():
+            form.instance.owner = request.user
             # get shares and store hashed secret
             shares = form.instance.get_shares()
             form.save()
@@ -47,7 +49,7 @@ def delete(request, scheme_id):
     """
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
-    scheme = get_object_or_404(ShamirSS, pk=scheme_id)
+    scheme = get_object_or_404(ShamirSS, pk=scheme_id, owner=request.user)
     mode = request.POST.get('mode')
     has_docs = Document.objects.filter(scheme=scheme).exists()
     if has_docs and mode not in ('with_files', 'scheme_only'):
@@ -70,7 +72,7 @@ def refresh(request, scheme_id):
     """
     if request.method != 'POST':
         return HttpResponseNotAllowed(['POST'])
-    scheme = get_object_or_404(ShamirSS, pk=scheme_id)
+    scheme = get_object_or_404(ShamirSS, pk=scheme_id, owner=request.user)
     mode = request.POST.get('mode')
     has_docs = Document.objects.filter(scheme=scheme).exists()
     if has_docs and mode not in ('with_files', 'scheme_only'):
@@ -89,16 +91,16 @@ def refresh(request, scheme_id):
 @login_required
 def encrypt(request, document_id, scheme_id):
     """ encrypt a document """
-    document = get_object_or_404(Document, pk=document_id)
-    scheme = get_object_or_404(ShamirSS, pk=scheme_id)
+    document = get_object_or_404(Document, pk=document_id, owner=request.user)
+    scheme = get_object_or_404(ShamirSS, pk=scheme_id, owner=request.user)
     if request.method == 'POST':
         form = EncryptDecryptForm(
-            scheme.n, True, request.POST, error_class=DivErrorList)
+            scheme.n, True, request.POST, error_class=DivErrorList, user=request.user)
         if form.is_valid() and form.encrypt(document):
             return redirect('/folder/{}'.format(document.folder_id))
     else:
         form = EncryptDecryptForm(
-            scheme.n, initial={'scheme': scheme}, error_class=DivErrorList)
+            scheme.n, initial={'scheme': scheme}, error_class=DivErrorList, user=request.user)
     return render(request, 'shared_secret/encdec.html', {
         'form': form,
         'document': document,
@@ -110,16 +112,16 @@ def encrypt(request, document_id, scheme_id):
 @login_required
 def decrypt(request, document_id):
     """ encrypt a document """
-    document = get_object_or_404(Document, pk=document_id)
-    scheme = get_object_or_404(ShamirSS, pk=document.scheme_id)
+    document = get_object_or_404(Document, pk=document_id, owner=request.user)
+    scheme = get_object_or_404(ShamirSS, pk=document.scheme_id, owner=request.user)
     if request.method == 'POST':
         form = EncryptDecryptForm(scheme.n, False, request.POST, initial={
-                                  'scheme': scheme}, error_class=DivErrorList)
+                                  'scheme': scheme}, error_class=DivErrorList, user=request.user)
         if form.is_valid() and form.decrypt(document):
             return redirect('/folder/{}'.format(document.folder_id))
     else:
         form = EncryptDecryptForm(scheme.n, False, initial={
-                                  'scheme': scheme}, error_class=DivErrorList)
+                                  'scheme': scheme}, error_class=DivErrorList, user=request.user)
     return render(request, 'shared_secret/encdec.html', {
         'form': form,
         'document': document,
