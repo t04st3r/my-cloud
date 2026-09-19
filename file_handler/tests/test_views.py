@@ -84,7 +84,9 @@ def test_download(auth_client, user):
     document = DocumentFactory(owner=user)
     resp = auth_client.get('/download/%d/' % document.id)
     assert resp.status_code == 200
-    assert resp['Content-Disposition'] == 'attachment; filename=' + document.filename()
+    cd = resp['Content-Disposition']
+    assert cd.startswith('attachment')
+    assert document.filename() in cd
 
 
 def test_cannot_download_other_users_file(auth_client):

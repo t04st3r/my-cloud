@@ -41,11 +41,11 @@ class Document(models.Model):
         return self.name
 
     def file_url(self):
-        """ Return static path to the file """
-        return settings.MEDIA_URL + self.file.name
+        """ Return the URL to the file (local media URL or a signed Spaces URL) """
+        return self.file.url
 
     def file_path(self):
-        """ Return complete path to the file """
+        """ Return the local filesystem path to the file (local storage only) """
         return settings.MEDIA_ROOT + self.file.name
 
     def filename(self):
@@ -60,5 +60,6 @@ class Document(models.Model):
         return '/' + '/'.join(a.name for a in ancestors) + '/' + self.name
 
     def file_mime(self):
-        """ Return file mime type """
-        return magic.from_file(settings.MEDIA_ROOT + self.file.name, mime=True)
+        """ Return the file mime type (reads a small buffer via the storage backend) """
+        with self.file.open('rb') as f:
+            return magic.from_buffer(f.read(2048), mime=True)

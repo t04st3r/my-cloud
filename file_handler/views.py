@@ -1,10 +1,9 @@
-from django.shortcuts import render, redirect, get_object_or_404, HttpResponse
-from django.utils.encoding import smart_str
+from django.shortcuts import render, redirect, get_object_or_404
 from file_handler.forms import UploadForm, FolderForm, DeleteDocumentForm, DeleteFolderForm
 from .models import Folder, Document
 from shared_secret.models import ShamirSS
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseNotAllowed
+from django.http import FileResponse, HttpResponseNotAllowed
 from .utils import get_earliest_objects_or_none
 
 
@@ -66,10 +65,12 @@ def folder(request, folder_id):
 def download(request, file_id):
     """ download a specified file """
     document = get_object_or_404(Document, pk=file_id, owner=request.user)
-    response = HttpResponse(document.file, content_type=document.file_mime)
-    response['Content-Disposition'] = 'attachment; filename=%s' % smart_str(document.filename())
-    response['X-Sendfile'] = smart_str(document.filename())
-    return response
+    return FileResponse(
+        document.file.open('rb'),
+        content_type=document.file_mime(),
+        as_attachment=True,
+        filename=document.filename(),
+    )
 
 
 @login_required

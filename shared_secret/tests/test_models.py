@@ -1,10 +1,10 @@
 import base64
-import os
 
 import django.contrib.auth.hashers as hashers
 import pytest
 from cryptography.fernet import Fernet
-from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 
 from shared_secret.models import ShamirSS
 from tests.factories import ShamirSSFactory
@@ -102,30 +102,23 @@ def test_validate_shares():
     assert scheme.validate_shares([(1, 'not-base64!!')]) is False
 
 
-def _make_file(name, content=b'content to encrypt\n'):
-    path = settings.MEDIA_ROOT + name
-    with open(path, 'wb') as fh:
-        fh.write(content)
-    return path
-
-
 def test_encrypt_decrypt_file_roundtrip():
     scheme = ShamirSSFactory(k=2, n=3)
     shares = scheme.get_shares()
     original = b'top secret payload\n'
-    path = _make_file('secret.txt', original)
+    name = default_storage.save('documents/secret.txt', ContentFile(original))
 
-    enc_rel = scheme.encrypt_file(path, shares)
-    assert enc_rel.endswith('.enc')
-    assert os.path.isfile(settings.MEDIA_ROOT + enc_rel)
+    enc = scheme.encrypt_file(name, shares)
+    assert enc.endswith('.enc')
+    assert default_storage.exists(enc)
 
-    dec_rel = scheme.decrypt_file(settings.MEDIA_ROOT + enc_rel, shares)
-    with open(settings.MEDIA_ROOT + dec_rel, 'rb') as fh:
-        assert fh.read() == original
+    dec = scheme.decrypt_file(enc, shares)
+    with default_storage.open(dec, 'rb') as f:
+        assert f.read() == original
 
 
 def test_encrypt_decrypt_missing_file_returns_none():
     scheme = ShamirSSFactory()
     shares = scheme.get_shares()
-    assert scheme.encrypt_file(settings.MEDIA_ROOT + 'nope.txt', shares) is None
-    assert scheme.decrypt_file(settings.MEDIA_ROOT + 'nope.enc', shares) is None
+    assert scheme.encrypt_file('documents/nope.txt', shares) is None
+    assert scheme.decrypt_file('documents/nope.enc', shares) is None

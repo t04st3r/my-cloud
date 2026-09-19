@@ -1,0 +1,73 @@
+# DigitalOcean App Platform spec — used ONCE to create the app:
+#   doctl apps create --spec .do/app.yaml
+# Afterwards, CI (.github/workflows/deploy.yml) only swaps the image and redeploys,
+# so the SECRET values you set below (or in the dashboard) are preserved.
+#
+# Edit the <PLACEHOLDERS> before creating the app.
+name: my-cloud
+region: fra
+services:
+  - name: web
+    image:
+      registry_type: DOCR
+      repository: my-cloud
+      tag: latest            # overridden with the pushed image digest on each deploy
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /login/
+      initial_delay_seconds: 30
+    envs:
+      - key: DEBUG
+        scope: RUN_TIME
+        value: "False"
+      # The App Platform health probe hits the container on an internal IP host,
+      # which can't be wildcarded per-host, so allow any host here. The public
+      # hostname is still enforced at App Platform's edge, and CSRF is locked to
+      # CSRF_TRUSTED_ORIGINS below.
+      - key: ALLOWED_HOSTS
+        scope: RUN_TIME
+        value: "*"
+      - key: CSRF_TRUSTED_ORIGINS
+        scope: RUN_TIME
+        value: "https://${APP_DOMAIN}"
+      # DATABASE_URL points at the standalone `my-cloud` managed Postgres, using its
+      # doadmin user (which owns the public schema). Set the real URI in the dashboard.
+      - key: DATABASE_URL
+        scope: RUN_TIME
+        type: SECRET
+        value: "<SET_IN_DASHBOARD>"
+      - key: USE_SPACES
+        scope: RUN_TIME
+        value: "True"
+      - key: SPACES_REGION
+        scope: RUN_TIME
+        value: "fra1"
+      - key: SPACES_ENDPOINT
+        scope: RUN_TIME
+        value: "https://fra1.digitaloceanspaces.com"
+      - key: SPACES_BUCKET
+        scope: RUN_TIME
+        value: "my-cloud-media"
+      # --- Secrets: set real values in the dashboard (or here before first create) ---
+      - key: SECRET_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: "<SET_IN_DASHBOARD>"
+      - key: GOOGLE_OAUTH_CLIENT_ID
+        scope: RUN_TIME
+        type: SECRET
+        value: "<SET_IN_DASHBOARD>"
+      - key: GOOGLE_OAUTH_CLIENT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: "<SET_IN_DASHBOARD>"
+      - key: SPACES_ACCESS_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: "<SET_IN_DASHBOARD>"
+      - key: SPACES_SECRET_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: "<SET_IN_DASHBOARD>"

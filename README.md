@@ -153,3 +153,34 @@ Set `SECRET_KEY`, `POSTGRES_PASSWORD` and `ALLOWED_HOSTS` in the environment (or
 a `.env` file next to `docker/docker-compose.yml`) before exposing it anywhere.
 
 You are good to go now!
+
+## Deploying to DigitalOcean App Platform
+
+CI/CD is wired up in [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml): on every push to
+`master` it runs the test suite with a **coverage gate (`--cov-fail-under=98`)**, and only if that
+passes does it build the image, push it to **DigitalOcean Container Registry (DOCR)**, and deploy to
+**App Platform** (`digitalocean/app_action/deploy@v2`, by image digest). Pull requests run the tests
+only.
+
+App Platform runs a single container (no nginx — **WhiteNoise** serves static files) with an
+**ephemeral disk**, so uploads/encrypted files are stored in **DigitalOcean Spaces** (set
+`USE_SPACES=True`). The app talks only to Django's storage API, so locally (with `USE_SPACES` unset)
+it keeps using the filesystem unchanged.
+
+**One-time setup:**
+
+1. **DOCR:** create a container registry. Edit the `REGISTRY` value in the workflow to
+   `registry.digitalocean.com/<your-registry>`.
+2. **Spaces:** create a bucket and a Spaces access key/secret.
+3. **App:** edit the `<PLACEHOLDERS>` in [`.do/app.yaml`](.do/app.yaml) (bucket, region), then create
+   the app once: `doctl apps create --spec .do/app.yaml`. It provisions an App Platform **dev
+   database** and binds `DATABASE_URL` automatically.
+4. **Secrets:** in the App Platform dashboard set the `SECRET` env vars — `SECRET_KEY`,
+   `GOOGLE_OAUTH_CLIENT_ID/SECRET`, `SPACES_ACCESS_KEY/SECRET`. (CI only swaps the image, so these are
+   preserved across deploys.)
+5. **GitHub:** add repo secret `DIGITALOCEAN_ACCESS_TOKEN` (a DO API token).
+6. **Google OAuth:** add the redirect URI `https://<app-domain>/accounts/google/login/callback/`; in
+   `/admin/` set the **Site** domain; the app's domain is already wired into `ALLOWED_HOSTS` /
+   `CSRF_TRUSTED_ORIGINS` via `${APP_DOMAIN}` in the spec.
+7. First deploy, then create an admin with
+   `doctl apps ... console` → `python manage.py createsuperuser` (or use the dashboard console).
