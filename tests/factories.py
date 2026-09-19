@@ -33,6 +33,7 @@ class FolderFactory(factory.django.DjangoModelFactory):
 
     name = factory.Sequence(lambda n: 'folder%d' % n)
     parent = None
+    owner = factory.SubFactory(UserFactory)
 
 
 class ShamirSSFactory(factory.django.DjangoModelFactory):
@@ -44,6 +45,7 @@ class ShamirSSFactory(factory.django.DjangoModelFactory):
     k = 2
     n = 3
     secret = ''
+    owner = factory.SubFactory(UserFactory)
 
 
 class DocumentFactory(factory.django.DjangoModelFactory):
@@ -51,6 +53,8 @@ class DocumentFactory(factory.django.DjangoModelFactory):
         model = Document
 
     name = factory.Sequence(lambda n: 'doc%d.txt' % n)
-    folder = factory.SubFactory(FolderFactory)
+    owner = factory.SubFactory(UserFactory)
+    # a document's folder defaults to one owned by the same user
+    folder = factory.SubFactory(FolderFactory, owner=factory.SelfAttribute('..owner'))
     file = factory.django.FileField(filename='doc.txt', data=b'test file content\n')
     scheme = None

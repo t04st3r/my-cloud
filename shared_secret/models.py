@@ -33,6 +33,7 @@ class ShamirSS(models.Model):
     k = models.IntegerField(choices=K_CHOICES)
     n = models.IntegerField(choices=N_CHOICES)
     secret = models.CharField(max_length=128)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='schemes')
 
     def __str__(self):
         return "{} ({}, {})".format(self.name, self.k, self.n)

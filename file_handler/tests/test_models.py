@@ -11,13 +11,17 @@ pytestmark = pytest.mark.django_db
 # ---- Folder -------------------------------------------------------------------
 
 def test_root_folders():
-    parent = FolderFactory()
-    parent2 = FolderFactory()
-    child = FolderFactory(parent=parent)
-    roots = Folder.root_folders()
+    from tests.factories import UserFactory
+    user = UserFactory()
+    parent = FolderFactory(owner=user)
+    parent2 = FolderFactory(owner=user)
+    child = FolderFactory(parent=parent, owner=user)
+    other = FolderFactory()                    # different owner -> excluded
+    roots = Folder.root_folders(user)
     assert parent in roots
     assert parent2 in roots
     assert child not in roots
+    assert other not in roots
 
 
 def test_is_empty():

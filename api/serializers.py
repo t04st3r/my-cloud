@@ -15,8 +15,8 @@ class ChildrenFolderSerializer(serializers.ModelSerializer):
 
 
 class FolderSerializer(serializers.ModelSerializer):
-    documents = DocumentSerializer(many=True)
-    children = ChildrenFolderSerializer(many=True)
+    documents = DocumentSerializer(many=True, read_only=True)
+    children = ChildrenFolderSerializer(many=True, read_only=True)
 
     class Meta:
         model = Folder

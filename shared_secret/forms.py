@@ -6,10 +6,11 @@ import os
 
 class EncryptDecryptForm(forms.Form):
     """ dynamic number of shares fields based n_shares """
-    def __init__(self, n_shares=None, enc=True, *args, **kwargs):
+    def __init__(self, n_shares=None, enc=True, *args, user=None, **kwargs):
         super(EncryptDecryptForm, self).__init__(*args, **kwargs)
         if n_shares is not None:
-            self.fields['scheme'] = forms.ModelChoiceField(queryset=ShamirSS.objects.all(), empty_label=None)
+            schemes = ShamirSS.objects.filter(owner=user) if user is not None else ShamirSS.objects.all()
+            self.fields['scheme'] = forms.ModelChoiceField(queryset=schemes, empty_label=None)
             if enc:
                 self.fields['scheme'].widget.attrs['class'] = 'form-control'
             else:

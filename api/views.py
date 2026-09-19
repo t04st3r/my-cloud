@@ -4,10 +4,17 @@ from .serializers import FolderSerializer
 
 
 class RootFolderList(generics.ListCreateAPIView):
-    queryset = Folder.root_folders()
     serializer_class = FolderSerializer
+
+    def get_queryset(self):
+        return Folder.root_folders(self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
 
 class FolderDetail(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Folder.objects.all()
     serializer_class = FolderSerializer
+
+    def get_queryset(self):
+        return Folder.objects.filter(owner=self.request.user)

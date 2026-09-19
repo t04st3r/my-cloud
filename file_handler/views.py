@@ -11,7 +11,7 @@ from .utils import get_earliest_objects_or_none
 @login_required
 def index(request):
     """ display root of the filesystem tree """
-    root_folders = Folder.root_folders()
+    root_folders = Folder.root_folders(request.user)
     form = DeleteFolderForm()
     return render(request, 'file_handler/index.html', {
         'root_folders': root_folders,
@@ -22,13 +22,13 @@ def index(request):
 @login_required
 def upload(request, folder_id):
     """ upload one or more files on the specified folder """
-    folder = get_object_or_404(Folder, pk=folder_id)
+    folder = get_object_or_404(Folder, pk=folder_id, owner=request.user)
     if request.method == 'POST':
-        form = UploadForm(request.POST, request.FILES)
+        form = UploadForm(request.POST, request.FILES, user=request.user)
         if form.is_valid():
             target = form.cleaned_data['folder']
             for uploaded in form.cleaned_data['file']:
-                document = Document(folder=target, file=uploaded)
+                document = Document(folder=target, file=uploaded, owner=request.user)
                 # Persist first so the storage backend resolves a unique file name,
                 # then use that reliable name as the document's display name.
                 document.save()
@@ -36,7 +36,7 @@ def upload(request, folder_id):
                 document.save(update_fields=['name'])
             return redirect('folder', folder_id=target.id)
     else:
-        form = UploadForm(initial={'folder': folder})
+        form = UploadForm(initial={'folder': folder}, user=request.user)
     return render(request, 'file_handler/upload.html', {
         'form': form,
         'folder': folder
@@ -46,10 +46,10 @@ def upload(request, folder_id):
 @login_required
 def folder(request, folder_id):
     """ Show content of a particular folder """
-    root = get_object_or_404(Folder, pk=folder_id)
-    children = Folder.objects.filter(parent=folder_id)
-    documents = Document.objects.filter(folder=folder_id)
-    scheme = get_earliest_objects_or_none(ShamirSS)
+    root = get_object_or_404(Folder, pk=folder_id, owner=request.user)
+    children = Folder.objects.filter(parent=folder_id, owner=request.user)
+    documents = Document.objects.filter(folder=folder_id, owner=request.user)
+    scheme = get_earliest_objects_or_none(ShamirSS, owner=request.user)
     dd_form = DeleteDocumentForm()
     df_form = DeleteFolderForm()
     return render(request, 'file_handler/folder.html', {
@@ -65,7 +65,7 @@ def folder(request, folder_id):
 @login_required
 def download(request, file_id):
     """ download a specified file """
-    document = get_object_or_404(Document, pk=file_id)
+    document = get_object_or_404(Document, pk=file_id, owner=request.user)
     response = HttpResponse(document.file, content_type=document.file_mime)
     response['Content-Disposition'] = 'attachment; filename=%s' % smart_str(document.filename())
     response['X-Sendfile'] = smart_str(document.filename())
@@ -75,16 +75,18 @@ def download(request, file_id):
 @login_required
 def create(request, folder_id=None):
     """ create a folder """
-    parent = get_object_or_404(Folder, pk=folder_id) if folder_id is not None else None
+    parent = get_object_or_404(Folder, pk=folder_id, owner=request.user) if folder_id is not None else None
     if request.method == 'POST':
-        form = FolderForm(request.POST)
+        form = FolderForm(request.POST, user=request.user)
         if form.is_valid():
-            form.save()
+            folder = form.save(commit=False)
+            folder.owner = request.user
+            folder.save()
         if form.instance.parent_id is None:
             return redirect('/')
         return redirect('folder', folder_id=form.instance.parent_id)
     else:
-        form = FolderForm(initial={'parent': parent})
+        form = FolderForm(initial={'parent': parent}, user=request.user)
         return render(request, 'file_handler/new_folder.html', {
             'form': form,
             'parent': parent
@@ -95,7 +97,7 @@ def create(request, folder_id=None):
 def delete_doc(request, file_id):
     """ delete a document """
     if request.method == 'POST':
-        document = get_object_or_404(Document, pk=file_id)
+        document = get_object_or_404(Document, pk=file_id, owner=request.user)
         form = DeleteDocumentForm(request.POST, instance=document)
         if form.is_valid():  # pragma: no branch - empty form is always valid
             folder = document.folder
@@ -108,7 +110,7 @@ def delete_doc(request, file_id):
 def delete(request, folder_id):
     """ Delete a folder """
     if request.method == 'POST':
-        folder = get_object_or_404(Folder, pk=folder_id)
+        folder = get_object_or_404(Folder, pk=folder_id, owner=request.user)
         parent = folder.parent
         form = DeleteFolderForm(request.POST, instance=folder)
         if form.is_valid():  # pragma: no branch - empty form is always valid
