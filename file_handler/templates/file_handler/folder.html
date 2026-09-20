@@ -5,7 +5,10 @@
 
 {% block title %}<h4>{% breadcrumb root %}</h4>{% endblock %}
 
-<h5><a class="btn btn-primary" href="/create/{{ root.id }}"><i class="far fa-plus-square"></i> Create Folder</a>&nbsp;<a class="btn btn-primary" href="/upload/{{ root.id }}/"><i class="fas fa-file-upload"></i> Upload Files</a></h5>
+<div class="form-actions">
+    <a class="btn btn-primary" href="/create/{{ root.id }}"><i class="far fa-plus-square"></i> Create Folder</a>
+    <a class="btn btn-primary" href="/upload/{{ root.id }}/"><i class="fas fa-file-upload"></i> Upload Files</a>
+</div>
 
 <table class="table">
     <thead class="thead-dark">
@@ -18,7 +21,7 @@
     <tbody>
 
         <tr>
-        <td><a href="#"><i class="far fa-folder"></i> .</a></td>
+        <td data-label="Name"><a href="#"><i class="far fa-folder"></i> .</a></td>
         <td></td>
         <td></td>
     </tr>
@@ -27,11 +30,11 @@
 
     {% if root.parent %}
 
-        <td><a href="/folder/{{ root.parent.id }}"><i class="far fa-folder"></i> ..</a></td>
+        <td data-label="Name"><a href="/folder/{{ root.parent.id }}"><i class="far fa-folder"></i> ..</a></td>
 
         {% else %}
 
-        <td><a href="/"><i class="far fa-folder"></i> ..</a></td>
+        <td data-label="Name"><a href="/"><i class="far fa-folder"></i> ..</a></td>
 
         {% endif %}
 
@@ -44,9 +47,9 @@
         {% for child in children %}
 
         <tr>
-            <td><a href="/folder/{{ child.id }}/"><i class="far fa-folder"></i> {{ child.name }}</a></td>
-            <td>{{ child.creation_date | date:'Y-m-d H:i' }}</td>
-            <td>
+            <td data-label="Name"><a href="/folder/{{ child.id }}/"><i class="far fa-folder"></i> {{ child.name }}</a></td>
+            <td data-label="Created at">{{ child.creation_date | date:'Y-m-d H:i' }}</td>
+            <td data-label="Action">
                 <form method="post" action="/delete/{{ child.id }}/">
                     {% csrf_token %}
                     {{ form.as_p }}
@@ -65,12 +68,12 @@
 
         <tr>
             {% if document.scheme == None %}
-                <td><a href="/download/{{ document.id }}/"><i class="far fa-file"></i> {{ document.name }}</a></td>
+                <td data-label="Name"><a href="/download/{{ document.id }}/"><i class="far fa-file"></i> {{ document.name }}</a></td>
             {% else %}
-                <td><a href="/download/{{ document.id }}/"><i class="fas fa-file-archive"></i> {{ document.name }}</a></td>
+                <td data-label="Name"><a href="/download/{{ document.id }}/"><i class="fas fa-file-archive"></i> {{ document.name }}</a></td>
             {% endif %}
-            <td>{{ document.creation_date | date:'Y-m-d H:i' }}</td>
-            <td>
+            <td data-label="Created at">{{ document.creation_date | date:'Y-m-d H:i' }}</td>
+            <td data-label="Action">
                 {% if document.scheme == None %}
                     {% if scheme == None %}
                         <a href="#" class="btn btn-secondary float-right enc_dec" title="Create at least one scheme to encrypt your file"><i class="fas fa-lock"></i> Encrypt</a>

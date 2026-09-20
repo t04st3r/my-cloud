@@ -4,7 +4,9 @@
 
 {% block title %}<h4>Saved Schemes</h4>{% endblock %}
 
-<h5><a href="/s/create" class="btn btn-primary"><i class="far fa-plus-square"></i> Create Scheme</a></h5>
+<div class="form-actions">
+    <a href="/s/create" class="btn btn-primary"><i class="far fa-plus-square"></i> Create Scheme</a>
+</div>
 
 {% if schemes %}
 
@@ -24,11 +26,11 @@
     {% for scheme in schemes %}
 
     <tr>
-        <td><i class="fas fa-cogs"></i> {{ scheme.name }}</td>
-        <td>2<sup>{{ scheme.mers_exp }}</sup> - 1</td>
-        <td>{{ scheme.k }}</td>
-        <td>{{ scheme.n }}</td>
-        <td>
+        <td data-label="Name"><i class="fas fa-cogs"></i> {{ scheme.name }}</td>
+        <td data-label="Field Size">2<sup>{{ scheme.mers_exp }}</sup> - 1</td>
+        <td data-label="Min. Shares (k)">{{ scheme.k }}</td>
+        <td data-label="Total Shares (n)">{{ scheme.n }}</td>
+        <td data-label="Actions">
             <button type="button"
                     class="btn btn-warning float-right enc_dec scheme-action"
                     data-action="regenerate"
@@ -76,8 +78,8 @@
             <tbody>
             {% for doc in scheme.document_set.all %}
             <tr>
-                <td><i class="fas fa-file-archive"></i> {{ doc.full_path }}</td>
-                <td>{{ doc.creation_date|date:'Y-m-d H:i' }}</td>
+                <td data-label="Affected file"><i class="fas fa-file-archive"></i> {{ doc.full_path }}</td>
+                <td data-label="Created at">{{ doc.creation_date|date:'Y-m-d H:i' }}</td>
             </tr>
             {% endfor %}
             </tbody>

@@ -59,12 +59,14 @@
                 <small id="shares-count" class="form-text text-muted">0 of {{ scheme.k }} required shares entered</small>
             </div>
 
-            {% if enc %}
-                <button id="enc-dec-submit" class="btn btn-primary" type="submit"><i class="fas fa-lock"></i> Encrypt</button>
-            {% else %}
-                <button id="enc-dec-submit" class="btn btn-primary" type="submit"><i class="fas fa-lock-open"></i> Decrypt</button>
-            {% endif %}
-            <a class="btn btn-primary" href="/folder/{{ document.folder_id }}"><i class="fas fa-arrow-circle-left"></i> Back to {{ document.folder.name }}</a>
+            <div class="form-actions">
+                {% if enc %}
+                    <button id="enc-dec-submit" class="btn btn-primary" type="submit"><i class="fas fa-lock"></i> Encrypt</button>
+                {% else %}
+                    <button id="enc-dec-submit" class="btn btn-primary" type="submit"><i class="fas fa-lock-open"></i> Decrypt</button>
+                {% endif %}
+                <a class="btn btn-primary" href="/folder/{{ document.folder_id }}"><i class="fas fa-arrow-circle-left"></i> Back to {{ document.folder.name }}</a>
+            </div>
         </form>
     </div>
 </div>
