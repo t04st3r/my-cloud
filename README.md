@@ -5,10 +5,6 @@ using [PostgreSQL](https://www.postgresql.org/) and running on [nginx](https://n
 web server. My cloud allows you to handle files in a filesystem and encrypt/decrypt them using
 [Shamir's Secret Sharing](https://web.mit.edu/6.857/OldStuff/Fall03/ref/Shamir-HowToShareASecret.pdf) scheme.
 
-**Warning**
-
-This app has been developed for demonstration purposes, is not meant to be used in production.
-
 ## Tech stack
 
 - Python 3.14 (managed with [uv](https://docs.astral.sh/uv/))
