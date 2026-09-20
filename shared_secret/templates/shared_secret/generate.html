@@ -12,8 +12,9 @@
         <li><p>make sure to save them in a safe place or distribute among your trusted partners</p></li>
     </ul>
 </div>
-<h5><a href="#" id="json-dl" class="btn btn-primary"><i class="fas fa-file-download"></i> Download as
-    JSON</a></h5>
+<div class="form-actions">
+    <a href="#" id="json-dl" class="btn btn-primary"><i class="fas fa-file-download"></i> Download as JSON</a>
+</div>
 
 <table class="table">
     <thead class="thead-dark">
@@ -29,9 +30,9 @@
     {% for share in shares %}
 
     <tr>
-        <td>{{ share.0 }}</td>
-        <td id="share-{{ share.0 }}" class="shares">{{ share.1 }}</td>
-        <td><a href="#" data-share="share-{{ share.0 }}" class="btn btn-warning float-right clip"><i
+        <td data-label="# Share">{{ share.0 }}</td>
+        <td data-label="Share value" id="share-{{ share.0 }}" class="shares">{{ share.1 }}</td>
+        <td data-label="Actions"><a href="#" data-share="share-{{ share.0 }}" class="btn btn-warning float-right clip"><i
                 class="far fa-clone"></i> Copy to clipboard</a></td>
     </tr>
 
@@ -40,7 +41,9 @@
     </tbody>
 </table>
 
-<a class="btn btn-primary" href="/s/"><i class="fas fa-arrow-circle-left"></i> Back to scheme list</a>
+<div class="form-actions">
+    <a class="btn btn-primary" href="/s/"><i class="fas fa-arrow-circle-left"></i> Back to scheme list</a>
+</div>
 
 <script>
 

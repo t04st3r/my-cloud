@@ -30,12 +30,14 @@
                 {{ form.folder }}
             </div>
 
-            <button id="upload-submit" class="btn btn-primary" type="submit" disabled>
-                <i class="fas fa-file-upload"></i> Upload <span id="upload-count"></span>
-            </button>
-            <a class="btn btn-secondary" href="/folder/{{ folder.id }}">
-                <i class="fas fa-arrow-circle-left"></i> Back to {{ folder.name }}
-            </a>
+            <div class="form-actions">
+                <button id="upload-submit" class="btn btn-primary" type="submit" disabled>
+                    <i class="fas fa-file-upload"></i> Upload <span id="upload-count"></span>
+                </button>
+                <a class="btn btn-secondary" href="/folder/{{ folder.id }}">
+                    <i class="fas fa-arrow-circle-left"></i> Back to {{ folder.name }}
+                </a>
+            </div>
         </form>
     </div>
 </div>

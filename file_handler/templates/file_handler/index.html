@@ -5,7 +5,9 @@
 
 {% block title %}<h4>{% breadcrumb None %}</h4>{% endblock %}
 
-<h5><a href="/create" class="btn btn-primary"><i class="far fa-plus-square"></i> Create Folder</a>&nbsp;</h5>
+<div class="form-actions">
+    <a href="/create" class="btn btn-primary"><i class="far fa-plus-square"></i> Create Folder</a>
+</div>
 
 {% if root_folders %}
 
@@ -20,7 +22,7 @@
     <tbody>
 
     <tr>
-        <td><a href="/"><i class="far fa-folder"></i> .</a></td>
+        <td data-label="Name"><a href="/"><i class="far fa-folder"></i> .</a></td>
         <td></td>
         <td></td>
     </tr>
@@ -28,9 +30,9 @@
     {% for folder in root_folders %}
 
     <tr>
-        <td><a href="folder/{{ folder.id }}/"><i class="far fa-folder"></i> {{ folder.name }}</a></td>
-        <td>{{ folder.creation_date | date:'Y-m-d H:i' }}</td>
-        <td>
+        <td data-label="Name"><a href="folder/{{ folder.id }}/"><i class="far fa-folder"></i> {{ folder.name }}</a></td>
+        <td data-label="Created at">{{ folder.creation_date | date:'Y-m-d H:i' }}</td>
+        <td data-label="Action">
             <form method="post" action="/delete/{{ folder.id }}/">
                 {% csrf_token %}
                 {{ form.as_p }}

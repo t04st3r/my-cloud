@@ -416,3 +416,116 @@ th.medium-width {
     fill: var(--text);
     font-size: 12px;
 }
+
+/* ---- Button rows -------------------------------------------------------- */
+/* Keeps groups of buttons from sticking together (they wrap with a gap). */
+.form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* ---- Mobile: hamburger nav + stacked "card" tables ---------------------- */
+@media (max-width: 767.98px) {
+    /* Collapsed nav drops below the brand as a stacked panel. */
+    .navbar-collapse {
+        margin-top: 0.5rem;
+    }
+    .navbar-nav .nav-link {
+        padding-top: 0.4rem;
+        padding-bottom: 0.4rem;
+    }
+    .navbar-nav .form-inline {
+        display: block;
+    }
+
+    /* Turn each data table into a list of cards so long filenames no longer
+       collide with the date/action columns (they did under table-layout: fixed). */
+    table {
+        table-layout: auto;
+    }
+    .table {
+        box-shadow: none;
+        background: transparent;
+    }
+    .table thead {
+        /* Column headers make no sense once rows become cards. */
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
+    .table tbody,
+    .table tr,
+    .table td {
+        display: block;
+        width: 100%;
+    }
+    .table tr {
+        margin-bottom: 0.85rem;
+        padding: 0.5rem 0.9rem;
+        border: 1px solid var(--border);
+        border-radius: 0.6rem;
+        background: var(--surface);
+        box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12), 0 1px 2px rgba(16, 24, 40, 0.08);
+    }
+    .table tbody tr:hover {
+        background: var(--surface);
+    }
+    .table td {
+        border-top: none;
+        padding: 0.3rem 0;
+        text-align: left;
+        word-break: break-word;
+    }
+    /* Hide the empty date/action cells on the "." and ".." navigation rows. */
+    .table td:empty {
+        display: none;
+    }
+    /* Field label above each value, taken from the cell's data-label. */
+    .table td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 0.1rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--muted);
+    }
+    /* Action cell: buttons become full-width and stack with breathing room. */
+    .table td[data-label="Action"],
+    .table td[data-label="Actions"] {
+        padding-top: 0.5rem;
+    }
+    .table td[data-label="Action"] .btn,
+    .table td[data-label="Actions"] .btn {
+        float: none !important;
+        display: block;
+        width: 100%;
+        margin: 0 0 0.5rem 0 !important;
+    }
+    .table td[data-label="Action"] form,
+    .table td[data-label="Actions"] form {
+        margin: 0;
+    }
+    .table td[data-label="Action"] .btn:last-child,
+    .table td[data-label="Actions"] .btn:last-child {
+        margin-bottom: 0 !important;
+    }
+
+    /* Fixed-width share input would otherwise force horizontal scrolling. */
+    .share-field {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    /* Stack action buttons full-width so they never collide. */
+    .form-actions .btn {
+        width: 100%;
+    }
+}

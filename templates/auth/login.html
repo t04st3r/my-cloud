@@ -3,26 +3,129 @@
 
 {% block title %}Login{% endblock %}
 
+{% block extra_head %}
+<style>
+    .how-it-works { max-width: 900px; margin: 2.5rem auto 0; }
+    .how-it-works .hiw-title { text-align: center; color: var(--text); margin-bottom: 0.25rem; }
+    .how-it-works .hiw-sub { text-align: center; color: var(--muted); margin-bottom: 2rem; }
+
+    .hiw-flow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch;
+        justify-content: center;
+    }
+    .hiw-step {
+        flex: 1 1 0;
+        min-width: 150px;
+        text-align: center;
+        padding: 0 0.75rem;
+    }
+    .hiw-icon {
+        width: 68px;
+        height: 68px;
+        margin: 0 auto 0.85rem;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        color: var(--accent);
+        background: var(--surface);
+        border: 2px solid var(--accent);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+    .hiw-step h6 { color: var(--text); font-weight: 600; margin-bottom: 0.35rem; }
+    .hiw-step p { color: var(--muted); font-size: 0.85rem; margin-bottom: 0; }
+
+    /* Arrow between steps */
+    .hiw-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--border);
+        font-size: 1.25rem;
+        padding: 0 0.25rem;
+        /* aligns roughly with the icon circles */
+        min-height: 68px;
+    }
+    /* On narrow screens the flow stacks vertically; rotate the arrows. */
+    @media (max-width: 575.98px) {
+        .hiw-flow { flex-direction: column; }
+        .hiw-step { padding: 0.5rem 0; }
+        .hiw-arrow { min-height: 0; padding: 0.35rem 0; }
+        .hiw-arrow .fa-chevron-right { transform: rotate(90deg); }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <div class="container">
     <div class="row">
-        <div class="col align-self-start"></div>
-        <div class="col align-self-center">
+        <div class="col align-self-start d-none d-md-block"></div>
+        <div class="col-12 col-md align-self-center">
             <div class="card login_card">
                 <div class="card-header">
                     My Cloud Login
                 </div>
                 <div class="card-body login-card">
-                    <p class="text-muted">Sign in to access your files and schemes.</p>
+                    <p class="text-muted">
+                        <strong>My Cloud</strong> is your private, encrypted home for files and
+                        secrets. Upload documents to storage that only you control, then split any
+                        sensitive secret &mdash; a password, a recovery key, a message &mdash; into
+                        several <em>shares</em> that you can hand out to people you trust. No single
+                        share reveals anything on its own: only when enough of them are brought back
+                        together can the secret be reconstructed.
+                    </p>
                     <a class="btn btn-primary btn-block" href="{% provider_login_url 'google' %}">
                         <i class="fab fa-google"></i> Sign in with Google
                     </a>
                 </div>
             </div>
         </div>
-        <div class="col align-self-end"></div>
+        <div class="col align-self-end d-none d-md-block"></div>
     </div>
+
+    <section class="how-it-works">
+        <h4 class="hiw-title">How does it work?</h4>
+        <p class="hiw-sub">
+            From a single secret to shares you can trust &mdash; and back again.
+            <a href="{% url 'help' %}">See the maths &rarr;</a>
+        </p>
+
+        <div class="hiw-flow">
+            <div class="hiw-step">
+                <div class="hiw-icon"><i class="fas fa-sitemap"></i></div>
+                <h6>1. Generate a scheme</h6>
+                <p>My Cloud creates a scheme of <em>n</em> shares with a threshold <em>k</em> &mdash; the number of shares needed to unlock a file.</p>
+            </div>
+
+            <div class="hiw-arrow"><i class="fas fa-chevron-right"></i></div>
+
+            <div class="hiw-step">
+                <div class="hiw-icon"><i class="fas fa-users"></i></div>
+                <h6>2. Share the shares</h6>
+                <p>Hand out the <em>n</em> shares to trustworthy partners &mdash; one each, so no one person holds the whole key.</p>
+            </div>
+
+            <div class="hiw-arrow"><i class="fas fa-chevron-right"></i></div>
+
+            <div class="hiw-step">
+                <div class="hiw-icon"><i class="fas fa-lock"></i></div>
+                <h6>3. Encrypt files</h6>
+                <p>Any file &mdash; a document, an image, anything &mdash; is encrypted using <em>k</em> of the <em>n</em> shares.</p>
+            </div>
+
+            <div class="hiw-arrow"><i class="fas fa-chevron-right"></i></div>
+
+            <div class="hiw-step">
+                <div class="hiw-icon"><i class="fas fa-unlock-alt"></i></div>
+                <h6>4. Decrypt together</h6>
+                <p>Only <em>k</em> partners with the right shares can decrypt. With just <em>k&minus;1</em>, an attacker learns absolutely nothing.</p>
+            </div>
+        </div>
+    </section>
 </div>
 
 {% endblock %}
